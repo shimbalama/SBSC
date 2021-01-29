@@ -1,14 +1,20 @@
-# Scaffold
+# Somatic base substitution caller for LRS
 
-Program to make a very simple python project scaffold based on https://packaging.python.org/tutorials/packaging-projects/ and https://python-packaging.readthedocs.io/en/latest/minimal.html
+Python tool that calls somatic base substitutions from matched tumour normal whole genome pileups.
 
 ## Getting Started
 
-NA
+Pip install
 
 ### Prerequisites
 
-NA
+samtools/1.10
+htslib/1.10.2
+tabix/0.2.6
+
+Pileups from samtools
+bgzip pileup_name
+tabix -b 2 -e 2 pileup_name.gz
 
 #### Required
 
@@ -20,11 +26,11 @@ NA
 
 ### Installing
 
-pip inatall <package name >
+pip install SBSC
 
 ## Running the program
 
-Please see the WIKI
+SBSC.py -h
 
 ## Authors
 
@@ -36,4 +42,4 @@ This project is licensed under the MIT License. See LICENSE
 
 ## Acknowledgments
 
-NA
+QMIR medical genomics team

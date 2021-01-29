@@ -4,8 +4,8 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="Somatic Base Substitution Caller",
-    version="0.0.1",
+    name="SBSC",
+    version="0.0.12",
     license='MIT',
     author="Liam McIntyre",
     author_email="shimbalama@gmail.com",
@@ -14,11 +14,11 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/shimbalama/SBSC",
     packages=setuptools.find_packages(),
-    scripts = ['bin/SBSC.py'], # Add executable to PATH
+    scripts = ['bin/SBSCall.py'], # Add executable to PATH
     include_package_data=True, # for manifest (ie use .txt files)
     zip_safe=False,
     keywords='NA',#describe package
-    [classifiers=[
+    classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
