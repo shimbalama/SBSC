@@ -368,31 +368,29 @@ class Vars:
 
 def chunk_ref(args, chroms):
     '''
-    Split ref into 1Mb chunks for threading
+    Split ref into chunks for parallel processing
     '''
-    # make server mode where just takes one chrom and scatters with WDL
-
     chunks = []
-    size = args.window_size  # just for testing, put back to 1mb
+    size = args.window_size
     total_len = 0
     for record in SeqIO.parse(args.ref, 'fasta'):
         if record.id in chroms:
-            for i in range(0, len(record.seq), size):
-                if i > 1300000:
-                    break
-                if len(record.seq) > i + size:
-                    end = i + size
+            seqlen = len(record.seq)
+            for start in range(0, seqlen, size):
+                if seqlen > start + size:
+                    end = start + size
                 else:  # end of chrom
-                    end = len(record.seq)
+                    end = seqlen
+                chunk = record.seq[start:end]
                 chunks.append(GenomicRegion(
                     str(record.id).replace('chr', ''),
-                    i,
+                    start,
                     end,
-                    str(record.seq)[i:end],
+                    chunk,
                     args.cancer_pile,
                     args.normal_pile))
-                total_len += len(str(record.seq)[i:end])
+                total_len += len(chunk)
 
     assert total_len == sum([genomic_region.end - genomic_region.start for genomic_region in chunks])
-    print('ccc', len(chunks))
+    print('split', ' '.join(chroms), 'into', len(chunks), 'chunks')
     return chunks

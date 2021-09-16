@@ -74,7 +74,7 @@ def parse_args(args):
         '--window_size',
         type=int,
         help='To use threading the genome is chunked into chunks of window size. the bigger the better but more RAM needed [100k]',
-        default=10000)
+        default=100000)
 
     filters = parser.add_argument_group(
         'Filters',
@@ -187,14 +187,13 @@ def main():
             d = json.load(f)
     else:
         chunks = pp.chunk_ref(args, chroms)
-        print(f'len chunks {len(chunks)}')
         d = {}
         with Pool(processes=args.threads) as pool:
             tmp = [(args, chunk) for chunk in chunks]
             res = pool.map(pp.doit, tmp)
             for variants in res:
-                d = {**d, **variants}
-        print('d', len(d))
+                d.update(variants)
+        print('called', len(d), 'variants')
         if args.json:
             with open('result.json', 'w') as fout:
                 json.dump(d, fout)
