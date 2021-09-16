@@ -15,6 +15,7 @@ Install into a virtualenv is recommended, _e.g._:
     tempdir=$(mktemp -d)
     git clone https://github.com/shimbalama/SBSC $tempdir
     cd $tempdir
+    tox # run tests: this is optional and requires tox be installed
     pip3 install -r requirements.txt .
 
 ### Prerequisites
