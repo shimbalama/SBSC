@@ -193,7 +193,6 @@ def main():
             res = pool.map(pp.doit, tmp)
             for variants in res:
                 d.update(variants)
-        print('called', len(d), 'variants')
         if args.json:
             with open('result.json', 'w') as fout:
                 json.dump(d, fout)

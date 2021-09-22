@@ -166,7 +166,7 @@ class GenomicRegion:
         keys = ['seq', 'pos', 'ref', 'reads', 'res', 'qual', 'pos_in_read', 'read_names', 'flags', 'map']
         # d={}
         for pos in tabixfile.fetch('chr' + str(self.chrom), self.start, self.end):
-            tmp_d = dict(zip(keys, pos.split()))
+            tmp_d = dict(zip(keys, pos.split('\t')))
             if tn == 't':
                 pos_d = defaultdict(lambda: defaultdict((dict)))#hack to deal with pickling
             chrom_pos = tmp_d.get('seq')+':'+tmp_d.get('pos')

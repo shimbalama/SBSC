@@ -33,10 +33,10 @@ class TestMain(TestCase):
         """
 
         # resource names
-        refgz = 'chr17_BRCA1.fa.gz'
-        npu_ = 'HCC1937_n_BRCA1.pileup.gz'
-        tpu_ = 'HCC1937_t_BRCA1.pileup.gz'
-        out_ = 'out.tsv'
+        refgz = 'chr17_RNF157.fa.gz'
+        npu_ = 'HCC1937_n_RNF157.pileup.gz'
+        tpu_ = 'HCC1937_t_RNF157.pileup.gz'
+        out_ = 'output_001_9_12_10.tsv'
 
         with tempfile.TemporaryDirectory() as tempdir:
 
@@ -56,10 +56,10 @@ class TestMain(TestCase):
             subprocess.run(
                 shlex.split(
                     f'python3 bin/SBSCall.py -t 4 -x chr17 -r {ref} '
-                    f'-n {npu} -c {tpu} -o {tempdir}/out'),
+                    f'-n {npu} -c {tpu} -o {tempdir}/output'),
                 check=True)
 
-            outfile = f'{tempdir}/out.tsv'
+            outfile = f'{tempdir}/output_001_9_12_10.tsv'
             with pkg_resources.path(resources, out_) as expected:
                 if not filecmp.cmp(outfile, expected):
                     msg = [f'{outfile} differs from expected:']
