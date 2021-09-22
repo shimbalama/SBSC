@@ -15,14 +15,30 @@ Install into a virtualenv is recommended, _e.g._:
     tempdir=$(mktemp -d)
     git clone https://github.com/shimbalama/SBSC $tempdir
     cd $tempdir
+    tox # run tests: this is optional and requires tox be installed
     pip3 install -r requirements.txt .
 
 ### Prerequisites
 
-Tabix-indexed pileups from samtools
+Tabix-indexed pileups from samtools. `samtools mpileup` should be run with the following options:
 
-    bgzip pileup_name
-    tabix -b 2 -e 2 pileup_name.gz
+    samtools mpileup \
+        --fasta-ref [reference.fa] \
+        --count-orphans \
+        --no-BAQ \
+        --max-depth 500 \
+        --min-BQ 1 \
+        --ignore-RG \
+        --ignore-overlaps \
+        -a -a \
+        --output-BP \
+        --output-MQ \
+        --output-extra FLAG,QNAME \
+        [bam] | bgzip > [pileup.gz]
+
+`tabix` should be run with the following options:
+
+    tabix -b 2 -e 2 [pileup.gz]
 
 When the tool runs `.tbi` index files are presumed to exist adjacent to input pileup files.
 
