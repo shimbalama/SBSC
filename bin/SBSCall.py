@@ -9,11 +9,14 @@ import pandas as pd
 
 import SBSC.parsers.parse_pile as pp
 import SBSC.output.filt as ff
+from SBSC import __version__
 
 
 def parse_args(args):
 
-    parser = argparse.ArgumentParser(description='somatic var caller')
+    parser = argparse.ArgumentParser(
+        description='somatic variant caller',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     required = parser.add_argument_group(
         'Required',
@@ -22,58 +25,63 @@ def parse_args(args):
     required.add_argument(
         '-r',
         '--ref',
+        required=True,
         type=str,
-        help='ref 37 or 38')
-
-    required.add_argument(
-        '-o',
-        '--output',
-        type=str,
-        help='output name [output]',
-        default='output')
+        help='reference fasta')
 
     required.add_argument(
         '-c',
         '--cancer_pile',
+        required=True,
         type=str,
         help='pileup of tumour/cancer')
 
     required.add_argument(
         '-n',
         '--normal_pile',
+        required=True,
         type=str,
         help='pileup of normal/blood')
 
     optional = parser.add_argument_group(
         'Optional',
-        'threads and chroms')
+        'output, threads and chroms')
+
+    optional.add_argument(
+        '-o',
+        '--output',
+        type=str,
+        help='output name',
+        default='output')
 
     optional.add_argument(
         '-x',
         '--chrom',
         type=str,
-        help='Which chromosomes to query. comma,separated,list or [all]',
+        help='Which chromosomes to query. comma,separated,list or "all"',
         default='all')
 
     optional.add_argument(
         '-t',
         '--threads',
         type=int,
-        help='Threads [7]. Uses about 12GB RAM per thread with window of 1MB, assuming 30x norm and 60x tumour',
+        help=('Number of threads. Uses about 6GB RAM per thread with window '
+              'of 100k, assuming 30x norm and 60x tumour'),
         default=5)
 
     optional.add_argument(
         '-b',
         '--base_qual',
         type=int,
-        help='Minimum individual base qual to use for var calling. [7]',
+        help='Minimum individual base qual to use for var calling.',
         default=7)  # 10=10% error
 
     optional.add_argument(
         '-w',
         '--window_size',
         type=int,
-        help='To use threading the genome is chunked into chunks of window size. the bigger the better but more RAM needed [100k]',
+        help=('To use threading the genome is chunked into chunks of '
+              'WINDOW_SIZE. The bigger the better but more RAM needed.'),
         default=100000)
 
     filters = parser.add_argument_group(
@@ -84,88 +92,56 @@ def parse_args(args):
         '-q',
         '--min_mean_base_quality',
         type=int,
-        help='Minimum mean base quality per position [9]',
+        help='Minimum mean base quality per position',
         default=9)
 
     filters.add_argument(
         '-p',
         '--P_value',
         type=float,
-        help='Exclude P values (from Fishers Exact test) larger than [0.001]',
+        help='Exclude P values (from Fishers Exact test) larger than this.',
         default=0.001)
 
     filters.add_argument(
         '-m',
         '--min_depth_tumour',
         type=int,
-        help='Minimun read depth for tumour [12]',
+        help='Minimum read depth for tumour',
         default=12)
 
     filters.add_argument(
         '-y',
         '--min_depth_normal',
         type=int,
-        help='Minimun read depth for normal [10]',
+        help='Minimum read depth for normal',
         default=10)
 
     filters.add_argument(
         '-j',
         '--json',
         action='store_false',
-        help='Make a json of all raw results to allow re-run of filtering [True].',
+        help='Make a json of all raw results to allow re-run of filtering.',
         default=True)
 
     filters.add_argument(
         '-u',
         '--use_json',
         action='store_true',
-        help='Use a json of all raw results to re-run filtering [False].',
+        help='Use a json of all raw results to re-run filtering.',
         default=False)
 
     filters.add_argument(
         '-z',
         '--MNVs',
         action='store_false',
-        help='Call MNVs (join contigous SNVs in output) [True].',
+        help='Call MNVs (join contigous SNVs in output).',
         default=True)
 
-    # annotate = parser.add_argument_group(
-    #     'Annotation',
-    #     'annotate')
+    parser.add_argument(
+        '--version',
+        action='version',
+        version=__version__)
 
-    # annotate.add_argument(
-    #     '-g',
-    #     '--gnomad',
-    #     type=str,
-    #     help='gnomad.genomes.r3.0.sites.vcf.bgz [38]',
-    #     default = '/reference/data/gnomAD/gnomad-public/r3.0/vcf/genomes/gnomad.genomes.r3.0.sites.vcf.bgz')
-
-    # annotate.add_argument(
-    #     '-k',
-    #     '--onek',
-    #     type=str,
-    #     help='1k genomes')
-
-    # annotate.add_argument(
-    #     '-l',
-    #     '--low_complexity',
-    #     type=str,
-    #     help='UCSC repeats [38]',
-    #     default = '/working/lab_nicw/liamM/nano/COLO829/pile/repeats_GRCh38.bed')
-
-    # annotate.add_argument(
-    #     '-s',
-    #     '--seg_dups',
-    #     type=str,
-    #     help='UCSC segmental duplications [38]',
-    #     default = '/working/lab_nicw/liamM/nano/COLO829/pile/segmental_dups_38.bed')
-
-    # annotate.add_argument(
-    #     '-m',
-    #     '--meres',
-    #     type=str,
-    #     help='telomeres_and_centromeres_38',
-    #     default = '/working/lab_nicw/liamM/nano/COLO829/pile/telomeres_and_centromeres_38.txt')
     return parser.parse_args(args)
 
 
@@ -176,7 +152,6 @@ def main():
 
     args = parse_args(sys.argv[1:])
 
-    # Several columns contain numeric quality values encoded as individual ASCII characters. Each character can range from “!” to “~” and is decoded by taking its ASCII value and subtracting 33; e.g., “A” encodes the numeric value 32.
     if args.chrom == 'all':
         chroms = ['chr' + str(i+1) for i in range(22)] + ['chrX', 'chrY']
     else:
