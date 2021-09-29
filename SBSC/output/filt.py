@@ -45,31 +45,32 @@ def filt(d, args, chroms):
             del d2[pos]
     df = pd.DataFrame.from_dict(d2, orient='index')
 
-    if len(df):
-        if args.MNVs:
-            df = MNVs(df)
-        fout_name = '_'.join([
-            args.output,
-            str(args.P_value).split('.')[1],
-            str(args.min_mean_base_quality),
-            str(args.min_depth_tumour),
-            str(args.min_depth_normal)])
-        # get rid of lsits
-        df = df.explode('tumour_alts')
-        df = df.explode('tumour_P')
-        df = df.explode('tumour_qual')
-        df = df.explode('normal_qual')
-        df = df.explode('strand')
-        df = df.explode('read_count_tumour')
-        df = df.explode('read_count_normal')
+    if not len(df):
+        return
 
-        df.to_csv(fout_name + '.tsv', sep='\t')
+    df['index_col'] = df.index
+    df[['chrom', 'pos']] = df.index_col.str.split(':', expand=True)
+
+    if args.MNVs:
+        df = MNVs(df)
+
+    fout_name = '_'.join([
+        args.output,
+        str(args.P_value).split('.')[1],
+        str(args.min_mean_base_quality),
+        str(args.min_depth_tumour),
+        str(args.min_depth_normal)])
+
+    # multiple alts as separate records
+    df = df.explode(['tumour_alts',
+                     'tumour_P', 'tumour_qual', 'normal_qual', 'strand',
+                     'read_count_tumour', 'read_count_normal'])
+
+    df.to_csv(fout_name + '.tsv', sep='\t')
 
 
 def MNVs(df):
 
-    df['index_col'] = df.index
-    df[['chrom', 'pos']] = df.index_col.str.split(':', expand=True)
     df.pos = df.pos.astype(int)
     already_updated = set([])
     for chrom, df_tmp in df.groupby('chrom'):
@@ -89,12 +90,33 @@ def MNVs(df):
                                 key = update_tmp.get('chrom') + ':'+str(update_tmp.get('pos'))
                                 if key not in already_updated:
                                     update['tumour_alts'][0] += update_tmp.get('tumour_alts')[0]
-                                    update['tumour_P'] += update_tmp.get('tumour_P')
-                                    update['tumour_qual'] += update_tmp.get('tumour_qual')
-                                    update['normal_qual'] += update_tmp.get('normal_qual')
-                                    update['strand'] += update_tmp.get('strand')
-                                    update['read_count_tumour'] += update_tmp.get('read_count_tumour')
-                                    update['read_count_normal'] += update_tmp.get('read_count_normal')
+                                    # FIXME?
+                                    #
+                                    # In simply combining multiple calls into
+                                    # one it's not immediately obvious what to
+                                    # do with the separate values for tumour_P,
+                                    # tumour_qual, normal_qual, strand,
+                                    # read_count_tumour and read_count_normal.
+                                    #
+                                    # Currently we take the simplest possible
+                                    # approach by using the values unchanged
+                                    # from just the first position.
+                                    #
+                                    # Other simple approaches include taking
+                                    # average values, worst values, or as
+                                    # commented below, keeping them all. The
+                                    # latter however would require some
+                                    # different treatment of multiple alts
+                                    # in filt() because the df.explode call
+                                    # will fail when len(tumour_alts) == 1 but
+                                    # the other columns have more values.
+                                    #
+                                    # update['tumour_P'] += update_tmp.get('tumour_P')
+                                    # update['tumour_qual'] += update_tmp.get('tumour_qual')
+                                    # update['normal_qual'] += update_tmp.get('normal_qual')
+                                    # update['strand'] += update_tmp.get('strand')
+                                    # update['read_count_tumour'] += update_tmp.get('read_count_tumour')
+                                    # update['read_count_normal'] += update_tmp.get('read_count_normal')
                                     df = df.drop(index=(key))
                                     already_updated.add(key)
                             else:
