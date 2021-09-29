@@ -18,74 +18,20 @@ def parse_args(args):
         description='somatic variant caller',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    required = parser.add_argument_group(
-        'Required',
-        'ref and pileups')
+    parser.add_argument(
+        '--version',
+        action='version',
+        version=__version__)
 
-    required.add_argument(
-        '-r',
-        '--ref',
-        required=True,
-        type=str,
-        help='reference fasta')
-
-    required.add_argument(
-        '-c',
-        '--cancer_pile',
-        required=True,
-        type=str,
-        help='pileup of tumour/cancer')
-
-    required.add_argument(
-        '-n',
-        '--normal_pile',
-        required=True,
-        type=str,
-        help='pileup of normal/blood')
-
-    optional = parser.add_argument_group(
-        'Optional',
-        'output, threads and chroms')
-
-    optional.add_argument(
+    parser.add_argument(
         '-o',
         '--output',
         type=str,
-        help='output name',
+        help='output files base name',
         default='output')
 
-    optional.add_argument(
-        '-x',
-        '--chrom',
-        type=str,
-        help='Which chromosomes to query. comma,separated,list or "all"',
-        default='all')
-
-    optional.add_argument(
-        '-t',
-        '--threads',
-        type=int,
-        help=('Number of threads. Uses about 6GB RAM per thread with window '
-              'of 100k, assuming 30x norm and 60x tumour'),
-        default=5)
-
-    optional.add_argument(
-        '-b',
-        '--base_qual',
-        type=int,
-        help='Minimum individual base qual to use for var calling.',
-        default=7)  # 10=10% error
-
-    optional.add_argument(
-        '-w',
-        '--window_size',
-        type=int,
-        help=('To use threading the genome is chunked into chunks of '
-              'WINDOW_SIZE. The bigger the better but more RAM needed.'),
-        default=100000)
-
     filters = parser.add_argument_group(
-        'Filters',
+        'variant filtering options',
         'P, depth etc')
 
     filters.add_argument(
@@ -110,37 +56,99 @@ def parse_args(args):
         default=12)
 
     filters.add_argument(
+        '-x',
+        '--chrom',
+        type=str,
+        help='Which chromosomes to query. comma,separated,list or "all"',
+        default='all')
+
+    filters.add_argument(
         '-y',
         '--min_depth_normal',
         type=int,
         help='Minimum read depth for normal',
         default=10)
 
-    filters.add_argument(
-        '-j',
-        '--json',
-        action='store_false',
-        help='Make a json of all raw results to allow re-run of filtering.',
-        default=True)
+    mnvgroup = filters.add_mutually_exclusive_group()
 
-    filters.add_argument(
-        '-u',
-        '--use_json',
-        action='store_true',
-        help='Use a json of all raw results to re-run filtering.',
-        default=False)
-
-    filters.add_argument(
-        '-z',
+    mnvgroup.add_argument(
         '--MNVs',
-        action='store_false',
-        help='Call MNVs (join contigous SNVs in output).',
-        default=True)
+        dest='MNVs',
+        action='store_true',
+        default=True,
+        help='Call MNVs (join contigous SNVs in output).')
+    
+    mnvgroup.add_argument(
+        '--no-MNVs',
+        dest='MNVs',
+        action='store_false')
 
-    parser.add_argument(
-        '--version',
-        action='version',
-        version=__version__)
+    subparsers = parser.add_subparsers(
+        required=True,
+        dest='subparser_name',
+        help=f'{parser.prog} [call|filt] --help for subcommand help',
+        title='subcommands')
+
+    call = subparsers.add_parser(
+        'call',
+        help='call and filter variants',
+        description='Two output files are generated: a JSON format file '
+        'containing all variants and a tsv format file containing only '
+        'variants that pass filtering.',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    call.add_argument(
+        '-r',
+        '--ref',
+        required=True,
+        type=str,
+        help='reference fasta')
+
+    call.add_argument(
+        '-c',
+        '--cancer_pile',
+        required=True,
+        type=str,
+        help='pileup of tumour/cancer')
+
+    call.add_argument(
+        '-n',
+        '--normal_pile',
+        required=True,
+        type=str,
+        help='pileup of normal/blood')
+
+    call.add_argument(
+        '-b',
+        '--base_qual',
+        type=int,
+        help='Minimum individual base qual to use for var calling.',
+        default=7)  # 10=10% error
+
+    call.add_argument(
+        '-t',
+        '--threads',
+        type=int,
+        help=('Number of threads. Uses about 6GB RAM per thread with window '
+              'of 100k, assuming 30x norm and 60x tumour'),
+        default=5)
+
+    call.add_argument(
+        '-w',
+        '--window_size',
+        type=int,
+        help=('To use threading the genome is chunked into chunks of '
+              'WINDOW_SIZE. The bigger the better but more RAM needed.'),
+        default=100000)
+
+    filt = subparsers.add_parser(
+        'filt',
+        help='filter existing variants',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    filt.add_argument(
+        'raw_results',
+        help='JSON file containing unfiltered calls.')
 
     return parser.parse_args(args)
 
@@ -157,8 +165,8 @@ def main():
     else:
         chroms = args.chrom.split(',')
 
-    if args.use_json:
-        with open('result.json') as f:
+    if args.subparser_name == 'filt':
+        with open(args.raw_results) as f:
             d = json.load(f)
     else:
         chunks = pp.chunk_ref(args, chroms)
@@ -168,13 +176,11 @@ def main():
             res = pool.map(pp.doit, tmp)
             for variants in res:
                 d.update(variants)
-        if args.json:
-            with open('result.json', 'w') as fout:
-                json.dump(d, fout)
+        with open(f'{args.output}.json', 'w') as fout:
+            json.dump(d, fout)
 
     ff.filt(d, args, chroms)
     df = pd.DataFrame.from_dict(d, orient='index')
-    df.to_csv(args.output + '.tsv', sep='\t')
 
 
 if __name__ == "__main__":

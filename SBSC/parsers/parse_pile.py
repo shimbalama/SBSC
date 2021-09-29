@@ -275,8 +275,8 @@ class Vars:
                 base_lower = 0
             proportion = self.get_proportion(base_upper, base_lower)
             calls['strand'] = [proportion]
-            calls['read_count_tumour'] = [(tumour_count, read_count_tumour)]
-            calls['read_count_normal'] = [(normal_count, read_count_normal)]
+            calls['read_count_tumour'] = [[tumour_count, read_count_tumour]]
+            calls['read_count_normal'] = [[normal_count, read_count_normal]]
 
         return calls, pvalue1
 

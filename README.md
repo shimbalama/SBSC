@@ -48,9 +48,8 @@ When the tool runs `.tbi` index files are presumed to exist adjacent to input pi
     SBSCall.py --help
 
     # basic example
-    SBSCall.py \
+    SBSCall.py call \
         -r /path/to/reference \
-        -o /path/to/output \
         -c /path/to/cancer_pileup.gz \
         -n /path/to/normal_pileup.gz 
 
