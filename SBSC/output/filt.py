@@ -63,8 +63,8 @@ def filt(d, args, chroms):
 
     # multiple alts as separate records
     df = df.explode(['tumour_alts',
-                        'tumour_P', 'tumour_qual', 'normal_qual', 'strand',
-                        'read_count_tumour', 'read_count_normal'])
+                     'tumour_P', 'tumour_qual', 'normal_qual', 'strand',
+                     'read_count_tumour', 'read_count_normal'])
 
     df.to_csv(fout_name + '.tsv', sep='\t')
 
