@@ -179,7 +179,7 @@ def main():
         with open(f'{args.output}.json', 'w') as fout:
             json.dump(d, fout)
 
-    ff.filt(d, args, chroms)
+    ff.filt(d, args)
     df = pd.DataFrame.from_dict(d, orient='index')
 
 
