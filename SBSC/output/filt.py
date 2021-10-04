@@ -1,8 +1,10 @@
 from collections import defaultdict
+from itertools import product
 import pandas as pd
+import numpy as np
 
 
-def filt(d, args, chroms):
+def filt(d, args):
 
     d2 = defaultdict(lambda: defaultdict(list))
     for pos, calls in d.items():
@@ -48,11 +50,22 @@ def filt(d, args, chroms):
     if not len(df):
         return
 
-    df['index_col'] = df.index
-    df[['chrom', 'pos']] = df.index_col.str.split(':', expand=True)
+    # make pseudo-VCF
+    # TODO make a proper VCF
+    df['tmp_index_col'] = df.index
+    df[['chrom', 'pos']] = df.tmp_index_col.str.split(':', expand=True)
+    df.drop('tmp_index_col', axis=1, inplace=True)
+    cols = df.columns.tolist()
+    cols = cols[-2:] + cols[:-2]
+    df = df[cols]
 
     if args.MNVs:
-        df = MNVs(df)
+        df = MNV(df)
+
+    # multiple alts as separate records
+    df = df.explode(['tumour_alts',
+                     'tumour_P', 'tumour_qual', 'normal_qual', 'strand',
+                     'read_count_tumour', 'read_count_normal'])
 
     fout_name = '_'.join([
         args.output,
@@ -61,64 +74,116 @@ def filt(d, args, chroms):
         str(args.min_depth_tumour),
         str(args.min_depth_normal)])
 
-    # multiple alts as separate records
-    df = df.explode(['tumour_alts',
-                     'tumour_P', 'tumour_qual', 'normal_qual', 'strand',
-                     'read_count_tumour', 'read_count_normal'])
-
-    df.to_csv(fout_name + '.tsv', sep='\t')
+    df.to_csv(fout_name + '.tsv', index=False, sep='\t')
 
 
-def MNVs(df):
+def distance(r1, r2):
+    """
+    Return r2['pos'] - r1['pos'] if r1['chrom'] == r2['chrom']
+    (corollary, return 0 iff r1 and r2 have same position)
+    Return np.inf if r1['chrom'] != r2['chrom']
+    """
+    if r1.get('chrom') is None or r1.get('chrom') != r2.get('chrom'):
+        return np.inf
+    return r2['pos'] - r1['pos']
 
+
+def mergepos(altalleles):
+    """
+    Given a list-of-lists representation of (possibly poly-allelic)
+    contiguous SNVs, return a list-of-sequences representation of the MNV
+    alleles at the first position
+
+    Args:
+        altalleles: list of lists, the inner lists representing allele(s)
+            at first and subsequent contiguous positions of a variant.
+            For example:
+            [['A']]                         # mono-allelic SNV
+            [['A', 'C']]                    # poly-allelic SNV
+            [['A'], ['C']]                  # mono-allelic MNV
+            [['A', 'C'], ['A'], ['C', 'G']] # poly-allelic MNV
+    Returns:
+        list of MNV alleles at the first position
+        >>> mergepos([['A']])
+        ['A']
+        >>> mergepos([['A']])
+        ['A', 'C']
+        >>> mergepos([['A'], ['C']])
+        ['AC']
+        >>> # note: the result is Cartesian product
+        >>> mergepos([['A', 'C'], ['A'], ['C', 'G']])
+        ['AAC', 'AAG', 'CAC', 'CAG']
+    """
+    if not altalleles:
+        return []
+    return [''.join(bases) for bases in product(*altalleles)]
+
+
+def mergesnvs(snvs):
+    """
+    Takes a list of contiguous SNV records with a list-of-alleles
+    representation in tumour_alts and returns MNV starting at the first
+    position.
+
+    Returns:
+        Empty list if snvs is empty, otherwise a single-element list
+        containing the MNV record
+
+    Raises:
+        ValueError if SNV positions are not contiguous
+    """
+    if not snvs:
+        return []
+
+    posx = [snv['pos'] for snv in snvs]
+    posx0 = [pos - posx[0] for pos in posx]
+    if not posx0 == list(range(len(snvs))):
+        raise ValueError(f'{posx} are not contiguous')
+
+    tumour_alts = mergepos([snv['tumour_alts'] for snv in snvs])
+    n_alleles = len(tumour_alts)
+    # simplification: in combining contiguous SNV calls into MNVs it's not
+    # immediately obvious what to do with the different values for tumour_P,
+    # tumour_qual, normal_qual, strand, read_count_tumour, read_count_normal.
+    # Currently we take the simplest possible approach by repeating the first
+    # value from the first position only. Other simple approaches include
+    # taking average values or worst values across positions and alleles.
+    first = snvs[0]
+    return [{
+        **snvs[0],
+        'tumour_alts':       tumour_alts,
+        'ref':               ''.join(snv['ref'] for snv in snvs),
+        'normal_alts':       ''.join(snv['normal_alts'] for snv in snvs),
+        'tumour_P':          [first['tumour_P'][0]] * n_alleles,
+        'tumour_qual':       [first['tumour_qual'][0]] * n_alleles,
+        'normal_qual':       [first['normal_qual'][0]] * n_alleles,
+        'strand':            [first['strand'][0]] * n_alleles,
+        'read_count_tumour': [first['read_count_tumour'][0]] * n_alleles,
+        'read_count_normal': [first['read_count_normal'][0]] * n_alleles
+    }]
+
+
+def MNV(df):
+    """
+    Convert any contiguous SNVs to MNVs.
+    """
     df.pos = df.pos.astype(int)
-    already_updated = set([])
-    for chrom, df_tmp in df.groupby('chrom'):
-        df_tmp = df_tmp.sort_values(by=['pos'])
-        for var_len in [5, 4, 3, 2, 1]:
-            df_tmp['dif'] = df_tmp.pos.diff(var_len)
-            hits = df_tmp[df_tmp['dif'] == var_len]
-            if len(hits):  # not empty
-                for hit in hits.pos:
-                    rows = df_tmp[(df_tmp.pos <= hit) & (df_tmp.pos >= (hit - var_len))]
-                    update = dict(rows.iloc[0])
-                    if len(update.get('tumour_alts')) == 1 and len(update.get('tumour_alts')[0]) == 1:
-                        for i in range(var_len):
-                            i += 1
-                            update_tmp = dict(rows.iloc[i])
-                            if len(update.get('tumour_alts')) == 1 and len(update.get('tumour_alts')[0]) == 1:
-                                key = update_tmp.get('chrom') + ':'+str(update_tmp.get('pos'))
-                                if key not in already_updated:
-                                    update['tumour_alts'][0] += update_tmp.get('tumour_alts')[0]
-                                    # FIXME?
-                                    #
-                                    # In simply combining multiple calls into
-                                    # one it's not immediately obvious what to
-                                    # do with the separate values for tumour_P,
-                                    # tumour_qual, normal_qual, strand,
-                                    # read_count_tumour and read_count_normal.
-                                    #
-                                    # Currently we take the simplest possible
-                                    # approach by using the values unchanged
-                                    # from just the first position.
-                                    #
-                                    # Other simple approaches include taking
-                                    # average values, worst values, or as
-                                    # commented below, keeping them all. The
-                                    # latter however would require some
-                                    # different treatment of multiple alts
-                                    # in filt() because the df.explode call
-                                    # will fail when len(tumour_alts) == 1 but
-                                    # the other columns have more values.
-                                    #
-                                    # update['tumour_P'] += update_tmp.get('tumour_P')
-                                    # update['tumour_qual'] += update_tmp.get('tumour_qual')
-                                    # update['normal_qual'] += update_tmp.get('normal_qual')
-                                    # update['strand'] += update_tmp.get('strand')
-                                    # update['read_count_tumour'] += update_tmp.get('read_count_tumour')
-                                    # update['read_count_normal'] += update_tmp.get('read_count_normal')
-                                    df = df.drop(index=(key))
-                                    already_updated.add(key)
-                            else:
-                                break
-    return df
+    df.sort_values(by=['chrom', 'pos'])
+    records = df.to_dict('records')
+
+    merged = []
+    prev = {}
+    contiguous = []
+    for record in records:
+        d = distance(prev, record)
+        if d == 1:
+            contiguous.append(record)
+        else:
+            assert d > 1, 'records must be sorted by (chrom, pos) ascending'
+            merged.extend(mergesnvs(contiguous))
+            contiguous = [record]
+        prev = record
+    merged.extend(mergesnvs(contiguous))
+
+    return df.from_records(
+        merged, index=[f'{x["chrom"]}:{x["pos"]}' for x in merged])

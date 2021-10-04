@@ -2,7 +2,6 @@
 Integration tests
 """
 
-import filecmp
 import gzip
 import importlib.resources as pkg_resources
 import json
@@ -13,8 +12,9 @@ from pathlib import Path
 from unittest import TestCase
 
 from tests import resources
+from tests.test_utils import filediff
 
-from jsondiff import diff
+from jsondiff import diff as jsondiff
 
 
 class TestMain(TestCase):
@@ -66,29 +66,13 @@ class TestMain(TestCase):
             with open(f'{tempdir}/output.json') as fd:
                 unfiltered = json.load(fd)
             expected = json.loads(pkg_resources.read_text(resources, unfilt_))
-            self.assertFalse(diff(unfiltered, expected))
+            self.assertFalse(jsondiff(unfiltered, expected))
 
             filtered = f'{tempdir}/output_001_9_12_10.tsv'
             with pkg_resources.path(resources, filt_) as expected:
-                if not filecmp.cmp(filtered, expected):
-                    msg = [f'{filtered} differs from expected:']
-                    found = False
-                    with open(filtered) as f1, open(expected) as f2:
-                        for n, (line1, line2) in enumerate(zip(f1, f2), 1):
-                            if line1 != line2:
-                                found = True
-                                msg.append(f'first difference at line {n}:')
-                                msg.append(f' - {line2}')
-                                msg.append(f' + {line1}')
-                        if not found:
-                            f1.seek(0)
-                            f2.seek(0)
-                            ll1, ll2 = len(f1.readlines()), len(f2.readlines())
-                            assert ll1 != ll2
-                            msg.append(
-                                f'first {n} lines match but {filtered} has '
-                                f'{ll1} lines and {expected} has {ll2}')
-                    self.fail('\n'.join(msg))
+                diff = filediff(filtered, expected)
+                if diff:
+                    self.fail(diff)
 
     def test_filt(self):
         """
@@ -117,22 +101,6 @@ class TestMain(TestCase):
 
             filtered = f'{tempdir}/output_001_9_12_10.tsv'
             with pkg_resources.path(resources, filt_) as expected:
-                if not filecmp.cmp(filtered, expected):
-                    msg = [f'{filtered} differs from expected:']
-                    found = False
-                    with open(filtered) as f1, open(expected) as f2:
-                        for n, (line1, line2) in enumerate(zip(f1, f2), 1):
-                            if line1 != line2:
-                                found = True
-                                msg.append(f'first difference at line {n}:')
-                                msg.append(f' - {line2}')
-                                msg.append(f' + {line1}')
-                        if not found:
-                            f1.seek(0)
-                            f2.seek(0)
-                            ll1, ll2 = len(f1.readlines()), len(f2.readlines())
-                            assert ll1 != ll2
-                            msg.append(
-                                f'first {n} lines match but {filtered} has '
-                                f'{ll1} lines and {expected} has {ll2}')
-                    self.fail('\n'.join(msg))
+                diff = filediff(filtered, expected)
+                if diff:
+                    self.fail(diff)
