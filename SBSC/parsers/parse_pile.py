@@ -22,10 +22,6 @@ class GenomicRegion:
         self.homopolymer_positions = set([])
         self.var_d = {}
 
-    def name(self):
-
-        print(f'{str(self.chrom)}:{str(self.start)}:{str(self.end)}')
-
     def run(self, args):
 
         self.find_hompols()
@@ -38,58 +34,6 @@ class GenomicRegion:
         vars_caller.get_vars(self.var_d, self.homopolymer_positions)
 
         return vars_caller.variants  # annotated
-
-    def annotate(self, d, args):
-
-        tbx = pysam.TabixFile(args.gnomad)
-        # UCSC
-        repeats = self.parse_UCSC(args.low_complexity, 'genoName', 'genoStart', 'genoEnd')
-        centromeres = self.parse_UCSC(args.meres, 'chrom', 'chromStart', 'chromEnd')
-        segmental_dups = self.parse_UCSC(args.seg_dups, 'chrom', 'chromStart', 'chromEnd')
-        print('ress', list(repeats)[:4])
-        for pos, calls in d.items():
-            chrom, position = pos.split(':')
-            if pos in repeats:
-                d[pos]['repeats'] = 'Y'
-            else:
-                d[pos]['repeats'] = 'N'
-            if pos in centromeres:
-                d[pos]['centromeres'] = 'Y'
-            else:
-                d[pos]['centromeres'] = 'N'
-            if pos in segmental_dups:
-                d[pos]['segmental_dups'] = 'Y'
-            else:
-                d[pos]['segmental_dups'] = 'N'
-            d[pos]['gnomad'] = 'N'
-            d[pos]['dbSNP'] = 'N'
-            # this is to determine if region dark in short reads, not var specific.
-            # very permissive. counts even if just indel overlap and +-5bp
-            if args.gnomad:
-                for i, row in enumerate(tbx.fetch(chrom, int(position) - 101, int(position) + 100)):
-                    row = str(row).split()
-                    # if row[1] == position:
-                    d[pos]['gnomad'] = 'Y'
-                    if row[1] == position:
-                        if row[2].startswith('rs'):
-                            d[pos]['dbSNP'] = 'Y'
-        return d
-
-    def parse_UCSC(self, ucsc, chrom, start, end):
-
-        s = set([])
-        with open(ucsc, 'r') as fin:
-            header = fin.readline().strip().split()
-            for line in fin:
-                tmp_d = dict(zip(header, line.strip().split()))
-                tmp_s = int(tmp_d.get(start))
-                tmp_e = int(tmp_d.get(end))
-                if tmp_d.get(chrom) == 'chr' + self.chrom and \
-                        (self.start < tmp_s < self.end or
-                         self.start < tmp_e < self.end):
-                    for i in range(tmp_s, tmp_e):
-                        s.add(tmp_d.get(chrom) + ':' + str(i))
-        return s
 
     def extract_ins(self, res, val):
 
