@@ -139,7 +139,7 @@ def parse_args(args):
         type=int,
         help=('To use threading the genome is chunked into chunks of '
               'WINDOW_SIZE. The bigger the better but more RAM needed.'),
-        default=100000)
+        default=10_000)
 
     filt = subparsers.add_parser(
         'filt',
@@ -155,7 +155,9 @@ def parse_args(args):
 
 def main():
     '''
-    Make a simple python package scaffold
+    1. Parse pileup
+    2. Call SNVs
+    3. Filter SNVs
     '''
 
     args = parse_args(sys.argv[1:])
@@ -173,7 +175,7 @@ def main():
         d = {}
         with Pool(processes=args.threads) as pool:
             tmp = [(args, chunk) for chunk in chunks]
-            res = pool.map(pp.doit, tmp)
+            res = pool.imap_unordered(pp.doit, tmp, chunksize=5)
             for variants in res:
                 d.update(variants)
         with open(f'{args.output}.json', 'w') as fout:

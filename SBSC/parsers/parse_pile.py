@@ -1,3 +1,5 @@
+from dataclasses import dataclass, field
+from typing import Dict, Set
 import pysam
 from Bio import SeqIO
 from collections import Counter, defaultdict
@@ -7,39 +9,50 @@ import operator
 
 def doit(tup):
     args, genomic_region = tup
-    return genomic_region.run(args)
+    return run(args, genomic_region)
 
+'''
+print(111,vars_caller.variants.get('chr17:76199503'))
+{'ref': 'T', 
+'tumour_alts': ['C'], 
+'normal_alts': 'T', 
+'tumour_P': [0.029815919108115117], 
+'hom_pol': 'Y', 
+'tumour_qual': [10.5],
+ 'tumour_qual_all': 21.56, 
+ 'normal_qual': [0], 
+ 'normal_qual_all': 20.606060606060606, 
+ 'strand': [1.0], 
+ 'read_count_tumour': 
+ [[4, 25]], 
+ 'read_count_normal': [[0, 33]]}
+ '''
+def run(args, genomic_region):
 
+    genomic_region.find_hompols()
+
+    genomic_region.parse_tab(pysam.TabixFile(args.cancer_pile), 't', args)
+
+    genomic_region.parse_tab(pysam.TabixFile(args.normal_pile), 'n', args)
+
+    vars_caller = Vars()#don't create in here
+    vars_caller.get_vars(genomic_region.var_d, genomic_region.homopolymer_positions)
+    print(111,vars_caller.variants.get('chr17:76199503'))
+    return vars_caller.variants
+
+@dataclass(frozen=True, slots=True)
 class GenomicRegion:
+    chrom: str
+    start: int
+    end: int
+    seq: str
+    tumour: str
+    normal: str
+    homopolymer_positions: Set = field(default_factory=set)
+    var_d: Dict = field(default_factory=dict)
 
-    def __init__(self, chrom, start, end, seq, tumour, normal):
-        self.chrom = chrom
-        self.start = start
-        self.end = end
-        self.seq = seq
-        self.tumour = tumour
-        self.normal = normal
-        self.homopolymer_positions = set([])
-        self.var_d = {}
+    def extract_indel(self, res, val):
 
-    def run(self, args):
-
-        self.find_hompols()
-
-        self.parse_tab(pysam.TabixFile(self.tumour), 't', args)
-
-        self.parse_tab(pysam.TabixFile(self.normal), 'n', args)
-
-        vars_caller = Vars()
-        vars_caller.get_vars(self.var_d, self.homopolymer_positions)
-
-        return vars_caller.variants  # annotated
-
-    def extract_ins(self, res, val):
-
-        # not currently used which sux as we lose seq info
-        # problem is that len wobble means that the exact seq won't also be in
-        # norm so germ gets through
         indels = []
         bits = res.strip().split(val)
         if len(bits) > 1:
@@ -61,10 +74,9 @@ class GenomicRegion:
 
         return indels, res
 
-    def extract_indel(self, res, tmp_d, i, args):
+    def extract(self, res, tmp_d, i, args):
 
         SVs = ['+-:break_point' for i in range(res.count('^') + res.count('$'))]
-        # ends = ['+-:end' for i in range(res.count('$'))]
         if '^' in res:
             # ^ (caret) marks the start of a read segment and the ASCII
             # of the character following `^' minus 33 gives the mapping quality
@@ -72,8 +84,8 @@ class GenomicRegion:
                 res = ''.join([bit[1:] for bit in res.split('^')])
             else:
                 res = ''.join([bit[1:] if j != 0 else bit for j, bit in enumerate(res.split('^'))])
-        ins, res = self.extract_ins(res, '+')
-        dels, res = self.extract_ins(res, '-')
+        ins, res = self.extract_indel(res, '+')
+        dels, res = self.extract_indel(res, '-')
 
         ref_up = tmp_d.get('ref').upper()
         to_keep = ['.', ',', 'A', 'T', 'C', 'G', '*']  # keep * cuz have phred score...
@@ -117,7 +129,7 @@ class GenomicRegion:
             res = str(tmp_d.get('res'))
             res_ss = res.upper().replace(',', '.')
             for i, version in enumerate([res, res_ss]):  # i==0 is raw, 1 is all upper
-                vars_dict, res_mod, res_mod_unfiltered = self.extract_indel(version, tmp_d, i, args)
+                vars_dict, res_mod, res_mod_unfiltered = self.extract(version, tmp_d, i, args)
                 for base, count in vars_dict.items():
                     if tn == 't':
                         pos_d[i][base][tn] = count
