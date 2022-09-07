@@ -12,20 +12,19 @@ def doit(tup):
     return run(args, genomic_region)
 
 '''
-print(111,vars_caller.variants.get('chr17:76199503'))
-{'ref': 'T', 
-'tumour_alts': ['C'], 
-'normal_alts': 'T', 
-'tumour_P': [0.029815919108115117], 
-'hom_pol': 'Y', 
-'tumour_qual': [10.5],
- 'tumour_qual_all': 21.56, 
- 'normal_qual': [0], 
- 'normal_qual_all': 20.606060606060606, 
- 'strand': [1.0], 
- 'read_count_tumour': 
- [[4, 25]], 
- 'read_count_normal': [[0, 33]]}
+print(111,vars_caller.variants.get('chr17:76199503')) #row
+{'ref': 'T',  #col
+'tumour_alts': ['C'], #col
+'normal_alts': 'T', #col
+'tumour_P': [0.029815919108115117], #meta col
+'hom_pol': 'Y', #meta col
+'tumour_qual': [10.5], #col with proper VCF format ie all data
+ 'tumour_qual_all': 21.56,  #col with proper VCF format ie all data
+ 'normal_qual': [0],  #col with proper VCF format ie all data
+ 'normal_qual_all': 20.606060606060606,  #col with proper VCF format ie all data
+ 'strand': [1.0], #meta col
+ 'read_count_tumour':  [[4, 25]],  #col as per VCF fmt
+ 'read_count_normal': [[0, 33]]} #col as per VCF fmt
  '''
 def run(args, genomic_region):
 
