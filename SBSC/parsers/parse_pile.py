@@ -45,110 +45,119 @@ class GenomicRegion:
     start: int
     end: int
     seq: str
-    tumour: str
-    normal: str
-    homopolymer_positions: Set = field(default_factory=set)
-    var_d: Dict = field(default_factory=dict)
+    homopolymer_positions: Set = field(default_factory=set, init=False)
 
-    def extract_indel(self, res, val):
+    def __post_init__(self):
+        '''set attribute 'df_recent' to the last n samples'''
 
-        indels = []
-        bits = res.strip().split(val)
-        if len(bits) > 1:
-            res = ''
-            for bit in bits:
-                if bit[0].isdigit():
-                    indel_len = []
-                    for char in bit:
-                        if char.isdigit():
-                            indel_len.append(char)
-                        else:
-                            break
-                    indel_len = ''.join(indel_len)
-                    indel = bit[len(indel_len):int(indel_len) + len(indel_len)]
-                    indels.append(val + ':' + indel)
-                    res += bit[len(indel_len) + int(indel_len):]
-                else:
-                    res += bit
+        object.__setattr__(self, 'homopolymer_positions', self.find_hompols())
 
-        return indels, res
-
-    def extract(self, res, tmp_d, i, args):
-
-        SVs = ['+-:break_point' for i in range(res.count('^') + res.count('$'))]
-        if '^' in res:
-            # ^ (caret) marks the start of a read segment and the ASCII
-            # of the character following `^' minus 33 gives the mapping quality
-            if res.startswith('^'):
-                res = ''.join([bit[1:] for bit in res.split('^')])
-            else:
-                res = ''.join([bit[1:] if j != 0 else bit for j, bit in enumerate(res.split('^'))])
-        ins, res = self.extract_indel(res, '+')
-        dels, res = self.extract_indel(res, '-')
-
-        ref_up = tmp_d.get('ref').upper()
-        to_keep = ['.', ',', 'A', 'T', 'C', 'G', '*']  # keep * cuz have phred score...
-        if i == 0:
-            res = ''.join([nuc for nuc in res if nuc.upper() in to_keep])
-            res = res.replace('.', ref_up).replace(',', tmp_d.get('ref').lower())
-        else:
-            res = ''.join([nuc for nuc in res if nuc.upper() in to_keep])
-            res = res.replace('.', ref_up).replace(',', ref_up)
-        if not len(res) == len(tmp_d.get('qual')):
-            print('not_same_len', len(res), len(tmp_d.get('qual')),
-                  res, tmp_d, i)
-        res_qual = list(zip(res, tmp_d.get('qual')))
-        # if (ord(quality) - 33) > args.base_qual]
-        # this is realling killing depth - makes sense for SNVs but not for SVs/indels
-        res = ''.join([base for base, quality in res_qual if (ord(quality) - 33) > args.base_qual])
-
-        # for base QC reporting and len becomes the new read depth
-        quals = [(read, quality) for read, quality in res_qual if (ord(quality) - 33) > args.base_qual]
-        quals_unfiltered = [(read, quality) for read, quality in res_qual]  # for indel SV depth... bit messy tidy up logic one day
-        vars_dict = Counter(SVs + ins + dels + list(res))  # only qual > args.base_qual are counted
-        skip = ['>', '<', '^']  # '*'
-        for i, var in enumerate(vars_dict.copy()):
-            if var in skip:
-                del vars_dict[var]
-        return vars_dict, quals, quals_unfiltered
-
-    def parse_tab(self, tabixfile, tn, args):
-
-        # new pileup
-        # chrm, pos, ref, depth, calls, phreds, position in read, read names, flags, map
-
-        # keys = ['seq', 'pos', 'ref', 'reads', 'res', 'qual']#old
-        keys = ['seq', 'pos', 'ref', 'reads', 'res', 'qual', 'pos_in_read', 'read_names', 'flags', 'map']
-        # d={}
-        for pos in tabixfile.fetch('chr' + str(self.chrom), self.start, self.end):
-            tmp_d = dict(zip(keys, pos.split('\t')))
-            if tn == 't':
-                pos_d = defaultdict(lambda: defaultdict((dict)))#hack to deal with pickling
-            chrom_pos = tmp_d.get('seq')+':'+tmp_d.get('pos')
-            res = str(tmp_d.get('res'))
-            res_ss = res.upper().replace(',', '.')
-            for i, version in enumerate([res, res_ss]):  # i==0 is raw, 1 is all upper
-                vars_dict, res_mod, res_mod_unfiltered = self.extract(version, tmp_d, i, args)
-                for base, count in vars_dict.items():
-                    if tn == 't':
-                        pos_d[i][base][tn] = count
-                        pos_d[i][base]['n'] = 0
-                    else:
-                        self.var_d[chrom_pos][i][base][tn] = count
-                tmp_d['res_mod'] = res_mod  # this should always be the upper version as its 2nd
-                tmp_d['res_mod_unfiltered'] = res_mod_unfiltered
-            if tn == 't':
-                self.var_d[chrom_pos] = pos_d
-            self.var_d[chrom_pos]['meta'][tn] = tmp_d
-
-    def find_hompols(self):
+    def find_hompols(self, length=3):
 
         for i, nuc in enumerate(self.seq):
             if nuc.upper() != 'N':
-                if len(self.seq[i:i+3]) == 3 and len(set(self.seq[i:i+3])) == 1:
+                if len(self.seq[i:i+length]) == length and len(set(self.seq[i:i+length])) == 1:
                     # hom pols len 3 + get flagged
-                    for j in range(i, i+5):  # in or adjacent to
+                    for j in range(i - 1, i + length + 1):  # in or adjacent to
                         self.homopolymer_positions.add(self.start+j)
+    # @property
+    # def hompol_positions(self) -> list[str]:
+    #     return self.homopolymer_positions
+
+
+
+    # def extract_indel(self, res, val):
+
+    #     indels = []
+    #     bits = res.strip().split(val)
+    #     if len(bits) > 1:
+    #         res = ''
+    #         for bit in bits:
+    #             if bit[0].isdigit():
+    #                 indel_len = []
+    #                 for char in bit:
+    #                     if char.isdigit():
+    #                         indel_len.append(char)
+    #                     else:
+    #                         break
+    #                 indel_len = ''.join(indel_len)
+    #                 indel = bit[len(indel_len):int(indel_len) + len(indel_len)]
+    #                 indels.append(val + ':' + indel)
+    #                 res += bit[len(indel_len) + int(indel_len):]
+    #             else:
+    #                 res += bit
+
+    #     return indels, res
+
+    # def extract(self, res, tmp_d, i, args):
+
+    #     SVs = ['+-:break_point' for i in range(res.count('^') + res.count('$'))]
+    #     if '^' in res:
+    #         # ^ (caret) marks the start of a read segment and the ASCII
+    #         # of the character following `^' minus 33 gives the mapping quality
+    #         if res.startswith('^'):
+    #             res = ''.join([bit[1:] for bit in res.split('^')])
+    #         else:
+    #             res = ''.join([bit[1:] if j != 0 else bit for j, bit in enumerate(res.split('^'))])
+    #     ins, res = self.extract_indel(res, '+')
+    #     dels, res = self.extract_indel(res, '-')
+
+    #     ref_up = tmp_d.get('ref').upper()
+    #     to_keep = ['.', ',', 'A', 'T', 'C', 'G', '*']  # keep * cuz have phred score...
+    #     if i == 0:
+    #         res = ''.join([nuc for nuc in res if nuc.upper() in to_keep])
+    #         res = res.replace('.', ref_up).replace(',', tmp_d.get('ref').lower())
+    #     else:
+    #         res = ''.join([nuc for nuc in res if nuc.upper() in to_keep])
+    #         res = res.replace('.', ref_up).replace(',', ref_up)
+    #     if not len(res) == len(tmp_d.get('qual')):
+    #         print('not_same_len', len(res), len(tmp_d.get('qual')),
+    #               res, tmp_d, i)
+    #     res_qual = list(zip(res, tmp_d.get('qual')))
+    #     # if (ord(quality) - 33) > args.base_qual]
+    #     # this is realling killing depth - makes sense for SNVs but not for SVs/indels
+    #     res = ''.join([base for base, quality in res_qual if (ord(quality) - 33) > args.base_qual])
+
+    #     # for base QC reporting and len becomes the new read depth
+    #     quals = [(read, quality) for read, quality in res_qual if (ord(quality) - 33) > args.base_qual]
+    #     quals_unfiltered = [(read, quality) for read, quality in res_qual]  # for indel SV depth... bit messy tidy up logic one day
+    #     vars_dict = Counter(SVs + ins + dels + list(res))  # only qual > args.base_qual are counted
+    #     skip = ['>', '<', '^']  # '*'
+    #     for i, var in enumerate(vars_dict.copy()):
+    #         if var in skip:
+    #             del vars_dict[var]
+    #     return vars_dict, quals, quals_unfiltered
+
+    # def parse_tab(self, tabixfile, tn, args):
+
+    #     # new pileup
+    #     # chrm, pos, ref, depth, calls, phreds, position in read, read names, flags, map
+
+    #     # keys = ['seq', 'pos', 'ref', 'reads', 'res', 'qual']#old
+    #     keys = ['seq', 'pos', 'ref', 'reads', 'res', 'qual', 'pos_in_read', 'read_names', 'flags', 'map']
+    #     # d={}
+    #     for pos in tabixfile.fetch('chr' + str(self.chrom), self.start, self.end):
+    #         tmp_d = dict(zip(keys, pos.split('\t')))
+    #         if tn == 't':
+    #             pos_d = defaultdict(lambda: defaultdict((dict)))#hack to deal with pickling
+    #         chrom_pos = tmp_d.get('seq')+':'+tmp_d.get('pos')
+    #         res = str(tmp_d.get('res'))
+    #         res_ss = res.upper().replace(',', '.')
+    #         for i, version in enumerate([res, res_ss]):  # i==0 is raw, 1 is all upper
+    #             vars_dict, res_mod, res_mod_unfiltered = self.extract(version, tmp_d, i, args)
+    #             for base, count in vars_dict.items():
+    #                 if tn == 't':
+    #                     pos_d[i][base][tn] = count
+    #                     pos_d[i][base]['n'] = 0
+    #                 else:
+    #                     self.var_d[chrom_pos][i][base][tn] = count
+    #             tmp_d['res_mod'] = res_mod  # this should always be the upper version as its 2nd
+    #             tmp_d['res_mod_unfiltered'] = res_mod_unfiltered
+    #         if tn == 't':
+    #             self.var_d[chrom_pos] = pos_d
+    #         self.var_d[chrom_pos]['meta'][tn] = tmp_d
+
+    
 
 
 class Vars:

@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from functools import partial
 from multiprocessing import Pool
 import argparse
 import sys
 import json
 import pandas as pd
-
+from Bio import SeqIO
 import SBSC.parsers.parse_pile as pp
+from SBSC.parsers.data_processor import process_genome_data
 import SBSC.output.filt as ff
 from SBSC import __version__
 
@@ -123,7 +125,7 @@ def parse_args(args):
         '--base_qual',
         type=int,
         help='Minimum individual base qual to use for var calling.',
-        default=7)  # 10=10% error
+        default=10)  # 10=10% error
 
     call.add_argument(
         '-t',
@@ -152,6 +154,30 @@ def parse_args(args):
 
     return parser.parse_args(args)
 
+def chunk_ref(args, chroms):
+    '''
+    Split ref into chunks for parallel processing
+    '''
+    chunks = []
+    size = args.window_size
+    total_len = 0
+    for record in SeqIO.parse(args.ref, 'fasta'):
+        if record.id in chroms:
+            seqlen = len(record.seq)
+            for start in range(0, seqlen, size):
+                if seqlen > start + size:
+                    end = start + size
+                else:  # end of chrom
+                    end = seqlen
+                chunk = str(record.seq)[start:end]
+                total_len += len(chunk)
+                yield pp.GenomicRegion(
+                        str(record.id).replace('chr', ''),
+                        start,
+                        end,
+                        chunk
+                    )
+            
 
 def main():
     '''
@@ -171,15 +197,20 @@ def main():
         with open(args.raw_results) as f:
             d = json.load(f)
     else:
-        chunks = pp.chunk_ref(args, chroms)
-        d = {}
+        print(11111)
+        chunks = chunk_ref(args, chroms)
+        print(22222)
+        dfs = []
         with Pool(processes=args.threads) as pool:
-            tmp = [(args, chunk) for chunk in chunks]
-            res = pool.imap_unordered(pp.doit, tmp, chunksize=5)
-            for variants in res:
-                d.update(variants)
-        with open(f'{args.output}.json', 'w') as fout:
-            json.dump(d, fout)
+            process_genome_data_prefil = partial(process_genome_data, args)
+            #tmp = [(args, chunk) for chunk in chunks]
+            res = pool.imap_unordered(process_genome_data_prefil, chunks, chunksize=5)
+            for df in res:
+                dfs.append(df)
+        df = pd.concat(dfs)
+        # with open(f'{args.output}.json', 'w') as fout:
+        #     json.dump(d, fout)
+        print(df)
 
     ff.filt(d, args)
     df = pd.DataFrame.from_dict(d, orient='index')
