@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 from functools import partial, reduce
-from typing import Callable
+from typing import Callable, Dict
 import pysam
 import numpy as np
 import pandas as pd
@@ -31,6 +31,9 @@ class Schema:#TODO ???drop 'pos_in_read', 'read_names'????
     SINGLE_NUCLEOTIDE_CALLS = 'SNV_calls'
     INDEL_CALLS = 'INDEL_calls'
     STRUCTURAL_CALLS = 'SV_calls'
+    HOMOPOLYMER = 'In_or_ajacent_to_homopolymer_of_length'
+    READ_DEPTH_POST_FILTER = 'read_depth_post_filtering'
+
 
 def create_df(region: GenomicRegion, pileup: str) -> pd.DataFrame:
     '''Converts a genomic region of a pileup to a df'''
@@ -38,11 +41,13 @@ def create_df(region: GenomicRegion, pileup: str) -> pd.DataFrame:
     tabixfile = pysam.TabixFile(pileup)
     coords = ['chr' + str(region.chrom), region.start, region.end]
     df = pd.DataFrame([line.split('\t') for line in tabixfile.fetch(*coords)], columns=keys)
-    df.set_index('pos', inplace=True)
+    index_names = Schema.CHROMOSOME + ':' + Schema.POSITION
+    df[index_names] = df[Schema.CHROMOSOME] + ':' + df[Schema.POSITION]
+    df.set_index(index_names, inplace=True)
+    df = df.astype({'reads': 'int64', 'pos': 'int64'})
     return df
 
 def remove_positions_with_little_support_for_somatic_var(df: pd.DataFrame) -> pd.DataFrame:
-    print(22222, type(df), df)
 
     def putative_vars(res_t, res_n, ref):
         res_t = remove_ref_from_tumour_res(res_n, res_t, ref)
@@ -65,10 +70,14 @@ def remove_redundant_column(df: pd.DataFrame, col_name: str) -> pd.DataFrame:
     df[col_name] = df[normal_col]
     del df[tumour_col]
     del df[normal_col]
-    print(1111, type(df))
    
     return df
 
+def add_homoploymers(df: pd.DataFrame, region: Dict) -> pd.DataFrame:
+
+    df[Schema.HOMOPOLYMER] = df[Schema.POSITION].apply(lambda x: region.get(x, 0))
+
+    return df
 
 def create_SV_column(sample_type: str, df: pd.DataFrame) -> pd.DataFrame:
     col = f'{Schema.RESULTS}_{sample_type}'
@@ -127,11 +136,19 @@ def remove_low_quality_bases(sample_type: str, df: pd.DataFrame, phred: int) -> 
             if (ord(quality) - 33) > phred:
                 new_res += base
                 new_qual += quality
+        assert len(new_res) == len(new_qual); 'resuts should match qualities'
         return pd.Series([new_res, new_qual])
-    df[[f'filtered_res_{sample_type}', f'filtered_qual_{sample_type}']] =  df.apply(lambda x: filter_on_base_qual(
-        x[f'{Schema.RESULTS_NUCLEOTIDES}_{sample_type}'],
-        x[f'{Schema.QUALITY}_{sample_type}']),
-        axis = 1)
+    df[[f'{Schema.RESULTS_NUCLEOTIDES_FILTERED}_{sample_type}',
+        f'{Schema.QUALITY_FILTERED}_{sample_type}']] =  df.apply(
+            lambda x: filter_on_base_qual(
+                x[f'{Schema.RESULTS_NUCLEOTIDES}_{sample_type}'],
+                x[f'{Schema.QUALITY}_{sample_type}']),
+            axis = 1)
+    return df
+
+def get_read_depth_after_filtering(sample_type: str, df: pd.DataFrame) -> pd.DataFrame:
+
+    df[f'{Schema.READ_DEPTH_POST_FILTER}_{sample_type}'] = df[f'{Schema.RESULTS_NUCLEOTIDES_FILTERED}_{sample_type}'].str.len()
     return df
 
 Preprocessor = Callable[[str, pd.DataFrame], pd.DataFrame]
@@ -143,10 +160,10 @@ def compose(sample_type: str, *functions: Preprocessor) -> Preprocessor:
 class CallVariant(ABC):
     '''Operations'''
     @abstractmethod
-    def call(self, df: pd.DataFrame) -> pd.DataFrame:
+    def call():
         pass
 
-    def caller(self, count, normal_count, reads_t, reads_n, putative_somatic_var, vars):
+    def caller(count, normal_count, reads_t, reads_n, putative_somatic_var, vars):
 
         vals = [count, normal_count]
         nons = [int(reads_t) - count, int(reads_n) - normal_count]
@@ -156,7 +173,7 @@ class CallVariant(ABC):
         return vars
     
 class CallSingleNucleotideVariant(CallVariant):
-    def call(self, df: pd.DataFrame) -> pd.DataFrame:
+    def call(df: pd.DataFrame, caller: CallVariant.caller) -> pd.DataFrame:
         def test_putative_somatic_SNVs(tumour_nucs, normal_nucs, ref):
             normal_nucs_upper = convert_to_upper(normal_nucs, ref)
             tumour_nucs_no_ref_upper = remove_ref_from_tumour_res(normal_nucs, tumour_nucs, ref)
@@ -168,9 +185,9 @@ class CallSingleNucleotideVariant(CallVariant):
             for putative_somatic_var, count in tumour_nucs_most_common.items():
                 if count > 4:
                     normal_count = normal_nucs_most_common.get(putative_somatic_var, 0)
-                    vars = self.caller(count, normal_count, len(tumour_nucs), len(normal_nucs), putative_somatic_var, vars)
+                    vars = caller(count, normal_count, len(tumour_nucs), len(normal_nucs), putative_somatic_var, vars)
             return vars if vars else np.nan
-        df[Schema.SNV_CALLS] = df.apply(lambda x: test_putative_somatic_SNVs(
+        df[Schema.SINGLE_NUCLEOTIDE_CALLS] = df.apply(lambda x: test_putative_somatic_SNVs(
             x[f'{Schema.RESULTS_NUCLEOTIDES_FILTERED}_tumour'],
             x[f'{Schema.RESULTS_NUCLEOTIDES_FILTERED}_normal'],
             x[Schema.REFERENCE]),
@@ -178,7 +195,7 @@ class CallSingleNucleotideVariant(CallVariant):
         )
         return df
 class CallInsertionOrDeletion(CallVariant):
-    def call(self, df: pd.DataFrame) -> pd.DataFrame:
+    def call(df: pd.DataFrame, caller: CallVariant.caller) -> pd.DataFrame:
         def test_top_putative_somatic_indel(tumour_indels, reads_t, reads_n, res_n):
             vars = []
             if type(tumour_indels) != float:
@@ -188,7 +205,7 @@ class CallInsertionOrDeletion(CallVariant):
                     putative_somatic_var, count = tumour_indels
                     if count > 4:
                         normal_count = normal_d.get(putative_somatic_var, 0)
-                        vars = self.caller(count, normal_count, reads_t, reads_n, putative_somatic_var, vars)
+                        vars = caller(count, normal_count, reads_t, reads_n, putative_somatic_var, vars)
             return vars if vars else np.nan
         df[Schema.INDEL_CALLS] = df.apply(lambda x: test_top_putative_somatic_indel(
             x[f'{Schema.RESULTS_INDELS}_tumour'],
@@ -199,12 +216,12 @@ class CallInsertionOrDeletion(CallVariant):
         )
         return df
 class CallStructuralVariant(CallVariant):
-    def call(self, df: pd.DataFrame) -> pd.DataFrame:
+    def call(df: pd.DataFrame, caller: CallVariant.caller) -> pd.DataFrame:
         def test_top_putative_somatic_SV(tumour_SVs, normal_SVs, reads_t, reads_n):
             #no limit as some reads naturally start and stop....
             vars = []
             if tumour_SVs > 4:
-                vars = self.caller(tumour_SVs, normal_SVs, reads_t, reads_n, 'SV', vars)
+                vars = caller(tumour_SVs, normal_SVs, reads_t, reads_n, 'SV', vars)
             return vars if vars else np.nan
         df[Schema.STRUCTURAL_CALLS] = df.apply(lambda x: test_top_putative_somatic_SV(
             x[f'{Schema.STRUCTURAL_VARIANTS}_tumour'],
@@ -219,8 +236,8 @@ class CallAllVaraints:
     '''Call each variant type and update df'''
     @abstractmethod
     def get_calls(df):
-        for operation in CallVariant.__subclasses__():
-            df = operation.call(df)
+        for caller in CallVariant.__subclasses__():
+            df = caller.call(df, CallVariant.caller)
         return df
 
 
@@ -229,26 +246,28 @@ def process_genome_data(args: ArgumentParser, region: GenomicRegion) -> pd.DataF
     df_tumour = create_df(region, args.cancer_pile)
     df_normal = create_df(region, args.normal_pile)
     df = df_normal.join(df_tumour, how='inner', lsuffix='_normal', rsuffix='_tumour')
-    if not df.empty:
-        df = remove_redundant_column(df, Schema.REFERENCE)
-        print(3333, type(df))
-
-        df = remove_redundant_column(df, Schema.CHROMOSOME),
-        print(4444, type(df), len(df), df[0], df[1])
-        df = remove_positions_with_little_support_for_somatic_var(df)
-
-        pipe = [
-            create_SV_column,
-            remove_carrots_from_res,
-            separate_indels_from_res,
-            partial(remove_low_quality_bases, phred=10),
-        ]
-        for sample_type in ['tumour', 'normal']:
-            preprocessor = compose(
-                sample_type,
-                *pipe
-            )
-            df = preprocessor(df)
+    if df.empty:
+        return None
+    # df.index = df.index.astype('int64')
+    # df[Schema.HOMOPOLYMER] = df.index.isin(region.homopolymers)
     
-        return CallAllVaraints.get_calls(df)
-    return None
+    df = remove_redundant_column(df, Schema.REFERENCE)
+    df = remove_redundant_column(df, Schema.CHROMOSOME)
+    df = remove_redundant_column(df, Schema.POSITION)
+    df = remove_positions_with_little_support_for_somatic_var(df)
+    df = add_homoploymers(df, region.get_hom_pol_lengths())
+    pipe = [
+        create_SV_column,
+        remove_carrots_from_res,
+        separate_indels_from_res,
+        partial(remove_low_quality_bases, phred=args.min_base_qual),
+        get_read_depth_after_filtering
+    ]
+    for sample_type in ['tumour', 'normal']:
+        preprocessor = compose(
+            sample_type,
+            *pipe
+        )
+        df = preprocessor(df)
+    df = CallAllVaraints.get_calls(df)
+    return df[df[['SNV_calls','INDEL_calls','SV_calls']].notna().any(1)]

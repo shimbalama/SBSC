@@ -1,11 +1,10 @@
 from dataclasses import dataclass, field
-from typing import Dict, Set
+from typing import Set
 import pysam
 from Bio import SeqIO
-from collections import Counter, defaultdict
 import scipy.stats as stats
 import operator
-
+import pandas as pd
 
 def doit(tup):
     args, genomic_region = tup
@@ -45,24 +44,43 @@ class GenomicRegion:
     start: int
     end: int
     seq: str
-    homopolymer_positions: Set = field(default_factory=set, init=False)
+    # homopolymer_positions: Set = field(init=False)
 
-    def __post_init__(self):
-        '''set attribute 'df_recent' to the last n samples'''
+    # def __post_init__(self):
+    #     '''set attribute 'homopolymer_positions'''
 
-        object.__setattr__(self, 'homopolymer_positions', self.find_hompols())
+    #     object.__setattr__(self, 'homopolymer_positions', self.find_hom_pol_positions())
 
-    def find_hompols(self, length=3):
-
+    def find_hom_pol_positions(self, length=3):
+     
+        s = set([])
         for i, nuc in enumerate(self.seq):
             if nuc.upper() != 'N':
                 if len(self.seq[i:i+length]) == length and len(set(self.seq[i:i+length])) == 1:
                     # hom pols len 3 + get flagged
-                    for j in range(i - 1, i + length + 1):  # in or adjacent to
-                        self.homopolymer_positions.add(self.start+j)
-    # @property
-    # def hompol_positions(self) -> list[str]:
-    #     return self.homopolymer_positions
+                    for j in range(i-1, i + length+1):  # in or adjacent to
+                        s.add(self.start+j+1)
+        return s
+        
+    def get_hom_pol_lengths(self):
+
+        df = pd.DataFrame({'pos': sorted(self.find_hom_pol_positions())})
+        df['rank'] = df['pos'].rank(method='first')
+        df['key'] = df['pos'] - df['rank']
+        result = (df.groupby('key')['pos'].agg(['min', 'max']))
+        result['length'] = (result.iloc[:,1] - result.iloc[:,0]) -1
+        d= {}
+        df = df.reset_index()  # make sure indexes pair with number of rows
+        for _, row in result.iterrows():
+            start = row['min']
+            stop = row['max'] + 1
+            for pos in range(start, stop):
+                d[pos] = row['length']
+        return d
+
+    @property
+    def homopolymers(self) -> list[str]:
+        return self.get_hom_pol_lengths()
 
 
 

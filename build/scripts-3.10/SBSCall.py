@@ -6,6 +6,7 @@ from multiprocessing import Pool
 import argparse
 import sys
 import json
+import time
 import pandas as pd
 from Bio import SeqIO
 import SBSC.parsers.parse_pile as pp
@@ -122,7 +123,7 @@ def parse_args(args):
 
     call.add_argument(
         '-b',
-        '--base_qual',
+        '--min_base_qual',
         type=int,
         help='Minimum individual base qual to use for var calling.',
         default=10)  # 10=10% error
@@ -158,8 +159,7 @@ def chunk_ref(args, chroms):
     '''
     Split ref into chunks for parallel processing
     '''
-    chunks = []
-    size = args.window_size
+    size = 100_000 #args.window_size - dont go lower than 100k, or super slow
     total_len = 0
     for record in SeqIO.parse(args.ref, 'fasta'):
         if record.id in chroms:
@@ -169,13 +169,17 @@ def chunk_ref(args, chroms):
                     end = start + size
                 else:  # end of chrom
                     end = seqlen
-                chunk = str(record.seq)[start:end]
-                total_len += len(chunk)
-                yield pp.GenomicRegion(
+                seq_chunk = str(record.seq)[start:end]
+                total_len += len(seq_chunk)
+                chars = set(seq_chunk)
+                if len(chars) == 1 and chars.pop().upper() == 'N':
+                    continue
+                else:
+                    yield pp.GenomicRegion(
                         str(record.id).replace('chr', ''),
                         start,
                         end,
-                        chunk
+                        seq_chunk
                     )
             
 
@@ -187,7 +191,7 @@ def main():
     '''
 
     args = parse_args(sys.argv[1:])
-
+    start = time.time()
     if args.chrom == 'all':
         chroms = ['chr' + str(i+1) for i in range(22)] + ['chrX', 'chrY']
     else:
@@ -197,9 +201,7 @@ def main():
         with open(args.raw_results) as f:
             d = json.load(f)
     else:
-        print(11111)
         chunks = chunk_ref(args, chroms)
-        print(22222)
         dfs = []
         with Pool(processes=args.threads) as pool:
             process_genome_data_prefil = partial(process_genome_data, args)
@@ -211,10 +213,10 @@ def main():
         # with open(f'{args.output}.json', 'w') as fout:
         #     json.dump(d, fout)
         print(df)
-
-    ff.filt(d, args)
-    df = pd.DataFrame.from_dict(d, orient='index')
-
+    df.to_csv('~/Downloads/regex.csv')
+    #ff.filt(d, args)
+    #df = pd.DataFrame.from_dict(d, orient='index')
+    print(f'Total run time (seconds): {time.time() - start}')
 
 if __name__ == "__main__":
     main()
