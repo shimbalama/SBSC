@@ -74,14 +74,15 @@ def remove_redundant_column(df: pd.DataFrame, col_name: str) -> pd.DataFrame:
    
     return df
 
-def check_the_ref_seq_matches_the_pileup_seq(df: pd.DataFrame, seq: str) -> pd.DataFrame:
+def check_the_ref_seq_matches_the_pileup_seq(df: pd.DataFrame, region: GenomicRegion) -> pd.DataFrame:
 
-    if len(df) == len(seq):
-        df['seq_from_ref'] = list(seq)
+    if len(df) == len(region.seq):
+        df['seq_from_ref'] = list(region.seq)
         if not df['seq_from_ref'].equals(df['ref']):
             raise ValueError('The given reference sequence doesnt match the reference inteh pileup')
-    else:#to log#TODO
-        print(f'skipping ref check: df={len(df)} and len seq={len(seq)}')
+    else:
+        logging.warn(f'skipping ref check for {region.__str__()} due to length missmatch: \
+            df={len(df)} and len seq={len(region.seq)}')
 
 def add_homoploymers(df: pd.DataFrame, region: Dict) -> pd.DataFrame:
 
@@ -258,11 +259,11 @@ def process_genome_data(args: ArgumentParser, region: GenomicRegion) -> pd.DataF
     df_normal = create_df(region, args.normal_pile)
     df = df_normal.join(df_tumour, how='inner', lsuffix='_normal', rsuffix='_tumour')
     if df.empty:
+        logging.warn(f'Genomic region {region.__str__()} has no data in pileup')
         return None
-    df = remove_redundant_column(df, Schema.REFERENCE)
-    df = remove_redundant_column(df, Schema.CHROMOSOME)
-    df = remove_redundant_column(df, Schema.POSITION)
-    check_the_ref_seq_matches_the_pileup_seq(df, region.seq)
+    for col in [Schema.REFERENCE, Schema.CHROMOSOME, Schema.POSITION]:
+        df = remove_redundant_column(df, col)
+    check_the_ref_seq_matches_the_pileup_seq(df, region)
     df = remove_positions_with_little_support_for_somatic_var(df)
     df = add_homoploymers(df, region.homopolymer_lengths)
     pipe = [
@@ -279,5 +280,4 @@ def process_genome_data(args: ArgumentParser, region: GenomicRegion) -> pd.DataF
         )
         df = preprocessor(df)
     df = CallAllVaraints.get_calls(df)
-    print(region.start, df.head(2).index, df.tail(2).index)
     return df[df[['SNV_calls','INDEL_calls','SV_calls']].notna().any(1)]

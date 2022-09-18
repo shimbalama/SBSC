@@ -1,13 +1,7 @@
-INFO:root:starting SBSC
-INFO:root:starting SBSC
 INFO:root:Creating a df for 17:480000-489999
 WARNING:root:Genomic region 17:480000-489999 has no data in pileup
 INFO:root:Creating a df for 17:76140000-76149999
-INFO:root:starting SBSC
 INFO:root:Creating a df for 17:76180000-76189999
-INFO:root:starting SBSC
-INFO:root:starting SBSC
-INFO:root:starting SBSC
 INFO:root:Creating a df for 17:76230000-76239999
 WARNING:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
 INFO:root:Creating a df for 17:76150000-76159999

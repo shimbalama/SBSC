@@ -8,14 +8,11 @@ import sys
 import json
 import time
 import pandas as pd
-from Bio import SeqIO
 import SBSC.parsers.parse_pile as pp
 from SBSC.parsers.data_processor import process_genome_data
-import SBSC.output.filt as ff
 from SBSC import __version__
 import logging
-logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
-logging.info('starting SBSC')#TODO - fox this !!
+logging.basicConfig(filename='log.txt', encoding='utf-8', level=logging.DEBUG)
 
 def parse_args(args):
 
