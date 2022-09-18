@@ -13,7 +13,9 @@ import SBSC.parsers.parse_pile as pp
 from SBSC.parsers.data_processor import process_genome_data
 import SBSC.output.filt as ff
 from SBSC import __version__
-
+import logging
+logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
+logging.info('starting SBSC')#TODO - fox this !!
 
 def parse_args(args):
 
@@ -154,33 +156,6 @@ def parse_args(args):
         help='JSON file containing unfiltered calls.')
 
     return parser.parse_args(args)
-
-def chunk_ref(args, chroms):
-    '''
-    Split ref into chunks for parallel processing
-    '''
-    size = 100_000 #args.window_size - dont go lower than 100k, or super slow
-    total_len = 0
-    for record in SeqIO.parse(args.ref, 'fasta'):
-        if record.id in chroms:
-            seqlen = len(record.seq)
-            for start in range(0, seqlen, size):
-                if seqlen > start + size:
-                    end = start + size
-                else:  # end of chrom
-                    end = seqlen
-                seq_chunk = str(record.seq)[start:end]
-                total_len += len(seq_chunk)
-                chars = set(seq_chunk)
-                if len(chars) == 1 and chars.pop().upper() == 'N':
-                    continue
-                else:
-                    yield pp.GenomicRegion(
-                        str(record.id).replace('chr', ''),
-                        start,
-                        end,
-                        seq_chunk
-                    )
             
 
 def main():
@@ -201,7 +176,7 @@ def main():
         with open(args.raw_results) as f:
             d = json.load(f)
     else:
-        chunks = chunk_ref(args, chroms)
+        chunks = pp.chunk_ref(args, chroms)
         dfs = []
         with Pool(processes=args.threads) as pool:
             process_genome_data_prefil = partial(process_genome_data, args)
@@ -212,7 +187,6 @@ def main():
         df = pd.concat(dfs)
         # with open(f'{args.output}.json', 'w') as fout:
         #     json.dump(d, fout)
-        print(df)
     df.to_csv('~/Downloads/regex.csv')
     #ff.filt(d, args)
     #df = pd.DataFrame.from_dict(d, orient='index')

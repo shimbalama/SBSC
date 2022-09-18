@@ -9,6 +9,7 @@ import re
 import scipy.stats as stats
 from abc import ABC, abstractmethod
 from SBSC.parsers.parse_pile import GenomicRegion
+import logging
 
 
 class Schema:#TODO ???drop 'pos_in_read', 'read_names'????
@@ -39,7 +40,7 @@ def create_df(region: GenomicRegion, pileup: str) -> pd.DataFrame:
     '''Converts a genomic region of a pileup to a df'''
     keys = [name for schema, name in vars(Schema).items() if "__" not in schema][:10]
     tabixfile = pysam.TabixFile(pileup)
-    coords = ['chr' + str(region.chrom), region.start, region.end]
+    coords = ['chr' + str(region.chrom), region.start, region.end + 1]
     df = pd.DataFrame([line.split('\t') for line in tabixfile.fetch(*coords)], columns=keys)
     index_names = Schema.CHROMOSOME + ':' + Schema.POSITION
     df[index_names] = df[Schema.CHROMOSOME] + ':' + df[Schema.POSITION]
@@ -72,6 +73,15 @@ def remove_redundant_column(df: pd.DataFrame, col_name: str) -> pd.DataFrame:
     del df[normal_col]
    
     return df
+
+def check_the_ref_seq_matches_the_pileup_seq(df: pd.DataFrame, seq: str) -> pd.DataFrame:
+
+    if len(df) == len(seq):
+        df['seq_from_ref'] = list(seq)
+        if not df['seq_from_ref'].equals(df['ref']):
+            raise ValueError('The given reference sequence doesnt match the reference inteh pileup')
+    else:#to log#TODO
+        print(f'skipping ref check: df={len(df)} and len seq={len(seq)}')
 
 def add_homoploymers(df: pd.DataFrame, region: Dict) -> pd.DataFrame:
 
@@ -243,19 +253,18 @@ class CallAllVaraints:
 
 def process_genome_data(args: ArgumentParser, region: GenomicRegion) -> pd.DataFrame:
     # load the data from the pileup file
+    logging.info(f'Creating a df for {region.__str__()}')
     df_tumour = create_df(region, args.cancer_pile)
     df_normal = create_df(region, args.normal_pile)
     df = df_normal.join(df_tumour, how='inner', lsuffix='_normal', rsuffix='_tumour')
     if df.empty:
         return None
-    # df.index = df.index.astype('int64')
-    # df[Schema.HOMOPOLYMER] = df.index.isin(region.homopolymers)
-    
     df = remove_redundant_column(df, Schema.REFERENCE)
     df = remove_redundant_column(df, Schema.CHROMOSOME)
     df = remove_redundant_column(df, Schema.POSITION)
+    check_the_ref_seq_matches_the_pileup_seq(df, region.seq)
     df = remove_positions_with_little_support_for_somatic_var(df)
-    df = add_homoploymers(df, region.get_hom_pol_lengths())
+    df = add_homoploymers(df, region.homopolymer_lengths)
     pipe = [
         create_SV_column,
         remove_carrots_from_res,
@@ -270,4 +279,5 @@ def process_genome_data(args: ArgumentParser, region: GenomicRegion) -> pd.DataF
         )
         df = preprocessor(df)
     df = CallAllVaraints.get_calls(df)
+    print(region.start, df.head(2).index, df.tail(2).index)
     return df[df[['SNV_calls','INDEL_calls','SV_calls']].notna().any(1)]
