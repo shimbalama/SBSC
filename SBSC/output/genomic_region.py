@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 import pandas as pd
 
-from .data_processor import DataSchema
+from ..parsers.parse_pileup import DataSchema
 
 @dataclass
 class DataSource:

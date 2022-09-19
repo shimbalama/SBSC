@@ -8,8 +8,8 @@ import sys
 import json
 import time
 import pandas as pd
-import SBSC.parsers.parse_pile as pp
-from SBSC.parsers.data_processor import process_genome_data
+import SBSC.parsers.parse_reference as ref
+from SBSC.parsers.parse_pileup import process_genome_data
 from SBSC import __version__
 import logging
 logging.basicConfig(filename='log.txt', encoding='utf-8', level=logging.DEBUG)
@@ -173,11 +173,10 @@ def main():
         with open(args.raw_results) as f:
             d = json.load(f)
     else:
-        chunks = pp.chunk_ref(args, chroms)
+        chunks = ref.chunk_ref(args, chroms)
         dfs = []
         with Pool(processes=args.threads) as pool:
             process_genome_data_prefil = partial(process_genome_data, args)
-            #tmp = [(args, chunk) for chunk in chunks]
             res = pool.imap_unordered(process_genome_data_prefil, chunks, chunksize=5)
             for df in res:
                 dfs.append(df)
