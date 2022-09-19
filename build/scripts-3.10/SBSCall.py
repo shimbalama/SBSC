@@ -5,11 +5,11 @@ from functools import partial
 from multiprocessing import Pool
 import argparse
 import sys
-import json
 import time
 import pandas as pd
-import SBSC.parsers.parse_pile as pp
-from SBSC.parsers.data_processor import process_genome_data
+from SBSC.parsers.parse_reference import chunk_ref
+from SBSC.parsers.parse_pileup import process_genome_data
+from SBSC.output.filt import filt
 from SBSC import __version__
 import logging
 logging.basicConfig(filename='log.txt', encoding='utf-8', level=logging.DEBUG)
@@ -29,19 +29,12 @@ def parse_args(args):
         '-o',
         '--output',
         type=str,
-        help='output files base name',
+        help="output file's base name",
         default='output')
 
     filters = parser.add_argument_group(
         'variant filtering options',
         'P, depth etc')
-
-    filters.add_argument(
-        '-q',
-        '--min_mean_base_quality',
-        type=int,
-        help='Minimum mean base quality per position',
-        default=9)
 
     filters.add_argument(
         '-p',
@@ -61,7 +54,8 @@ def parse_args(args):
         '-x',
         '--chrom',
         type=str,
-        help='Which chromosomes to query. comma,separated,list or "all"',
+        nargs='+',
+        help='Which chromosomes to query',
         default='all')
 
     filters.add_argument(
@@ -128,19 +122,17 @@ def parse_args(args):
         default=10)  # 10=10% error
 
     call.add_argument(
-        '-t',
-        '--threads',
+        '-p',
+        '--processes',
         type=int,
-        help=('Number of threads. Uses about 6GB RAM per thread with window '
-              'of 100k, assuming 30x norm and 60x tumour'),
-        default=5)
+        help=('Number of processes'),
+        default=2)
 
     call.add_argument(
         '-w',
         '--window_size',
         type=int,
-        help=('To use threading the genome is chunked into chunks of '
-              'WINDOW_SIZE. The bigger the better but more RAM needed.'),
+        help=('To use multi processing the genome is chunked.'),
         default=10_000)
 
     filt = subparsers.add_parser(
@@ -164,28 +156,27 @@ def main():
 
     args = parse_args(sys.argv[1:])
     start = time.time()
+    print (args.chrom)
     if args.chrom == 'all':
         chroms = ['chr' + str(i+1) for i in range(22)] + ['chrX', 'chrY']
     else:
         chroms = args.chrom.split(',')
 
     if args.subparser_name == 'filt':
-        with open(args.raw_results) as f:
-            d = json.load(f)
+        pd.read_pickle('results.pickle')
     else:
-        chunks = pp.chunk_ref(args, chroms)
+        chunks = chunk_ref(args, chroms)
         dfs = []
-        with Pool(processes=args.threads) as pool:
+        with Pool(processes=args.processes) as pool:
             process_genome_data_prefil = partial(process_genome_data, args)
-            #tmp = [(args, chunk) for chunk in chunks]
             res = pool.imap_unordered(process_genome_data_prefil, chunks, chunksize=5)
             for df in res:
                 dfs.append(df)
         df = pd.concat(dfs)
-        # with open(f'{args.output}.json', 'w') as fout:
-        #     json.dump(d, fout)
+        df.to_pickle('results.pickle')
+        
     df.to_csv('~/Downloads/regex.csv')
-    #ff.filt(d, args)
+    #filt(df, args)
     #df = pd.DataFrame.from_dict(d, orient='index')
     print(f'Total run time (seconds): {time.time() - start}')
 
