@@ -46,10 +46,9 @@ class GenomicRegion:
                     len(seq[pos : pos + length]) == length
                     and len(set(seq[pos : pos + length])) == 1
                 ):
-                    # hom pols len 3 + get flagged
                     for hom_pol_pos in range(
                         pos - 1, pos + length + 1
-                    ):  # in or adjacent to
+                    ):
                         s.add(start + hom_pol_pos + 1)
         return s
 

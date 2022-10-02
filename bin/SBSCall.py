@@ -54,9 +54,9 @@ def parse_args(args):
         '-x',
         '--chrom',
         type=str,
-        nargs='+',
         help='Which chromosomes to query',
-        default='all')
+        default='all')#        nargs='+',
+
 
     filters.add_argument(
         '-y',
@@ -156,7 +156,6 @@ def main():
 
     args = parse_args(sys.argv[1:])
     start = time.time()
-    print (args.chrom)
     if args.chrom == 'all':
         chroms = ['chr' + str(i+1) for i in range(22)] + ['chrX', 'chrY']
     else:
@@ -165,7 +164,7 @@ def main():
     if args.subparser_name == 'filt':
         pd.read_pickle('results.pickle')
     else:
-        chunks = chunk_ref(args, chroms)
+        chunks = chunk_ref(args.window_size, args.ref, chroms)
         dfs = []
         with Pool(processes=args.processes) as pool:
             process_genome_data_prefil = partial(process_genome_data, args)
