@@ -37,7 +37,7 @@ class GenomicRegion:
         Returns:
         {9, 10, 11, 12, 13, 15, 16, 17, 18, 19}
         """
-        s = set([])
+        positions = set([])
         seq = self.seq_padding_start + self.seq + self.seq_padding_end
         start = self.start - len(self.seq_padding_start)
         for pos, nuc in enumerate(seq):
@@ -49,8 +49,8 @@ class GenomicRegion:
                     for hom_pol_pos in range(
                         pos - 1, pos + length + 1
                     ):
-                        s.add(start + hom_pol_pos + 1)
-        return s
+                        positions.add(start + hom_pol_pos + 1)
+        return positions
 
     def get_hom_pol_lengths(self) -> dict[int, int]:
         """

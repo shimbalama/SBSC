@@ -3,6 +3,7 @@ import re
 from abc import ABC, abstractmethod
 from argparse import ArgumentParser
 from collections import Counter
+from dataclasses import dataclass
 from functools import partial, reduce
 from typing import Any, Callable, Dict, Tuple
 
@@ -99,6 +100,7 @@ def check_the_ref_seq_matches_the_pileup_seq(
             raise ValueError(
                 "The given reference sequence doesnt match the reference inteh pileup"
             )
+        del df["seq_from_ref"]
     else:
         logging.warn(
             f"skipping ref check for {region.__str__()} due to length missmatch: \
@@ -106,7 +108,7 @@ def check_the_ref_seq_matches_the_pileup_seq(
         )
 
 
-def add_homoploymers(df: pd.DataFrame, region: Dict) -> pd.DataFrame:
+def add_homoploymers(df: pd.DataFrame, region: dict) -> pd.DataFrame:
     """Adds a homopolymer column to df"""
     df[Schema.HOMOPOLYMER] = df[Schema.POSITION].apply(lambda x: region.get(x, 0))
 
@@ -192,7 +194,7 @@ def separate_indels_from_res(sample_type: str, df: pd.DataFrame) -> pd.DataFrame
         f"{Schema.RESULTS_NO_CARET}_{sample_type}"
     ].apply(find_indels_in_res)
     assert df[nucs].str.len().equals(df[qual].str.len())
-    f"{nucs} and {qual} should have same length!! Exiting..."
+    f"{nucs} and {qual} should have same length"
     return df
 
 
@@ -246,6 +248,22 @@ def compose(sample_type: str, *functions: Preprocessor) -> Preprocessor:
     )
 
 
+@dataclass
+class Counts:
+    tumour_var: int
+    normal_var: int
+    total_tumour_reads: int
+    total_normal_reads: int
+
+    @property
+    def non_var_tumour_reads(self):
+        return self.total_tumour_reads - self.tumour_var
+
+    @property
+    def non_var_normal_reads(self):
+        return self.total_normal_reads - self.normal_var
+
+
 class CallVariant(ABC):
     """Operations"""
 
@@ -254,11 +272,15 @@ class CallVariant(ABC):
         pass
 
     @staticmethod
-    def caller(count: int, normal_count: int, reads_t: int, reads_n: int) -> float:
+    def caller(var_counts: Counts) -> float:
         """Return p value from fisher exact test of given reads counts"""
-        vals = [count, normal_count]
-        nons = [reads_t - count, reads_n - normal_count]
-        oddsratio, p_value = stats.fisher_exact([vals, nons], alternative="greater")
+        _, p_value = stats.fisher_exact(
+            [
+                [var_counts.tumour_var, var_counts.normal_var],
+                [var_counts.non_var_tumour_reads, var_counts.non_var_normal_reads],
+            ],
+            alternative="greater",
+        )
 
         return p_value
 
@@ -269,7 +291,7 @@ class CallSingleNucleotideVariant(CallVariant):
 
         def test_putative_somatic_SNVs(
             tumour_nucs: str, normal_nucs: str, ref: str
-        ) -> Any:
+        ) -> list[tuple[str, float]] | float:
             normal_nucs_upper = convert_to_upper(normal_nucs, ref)
             tumour_nucs_no_ref_upper = remove_ref_from_tumour_res(
                 normal_nucs, tumour_nucs, ref
@@ -280,16 +302,20 @@ class CallSingleNucleotideVariant(CallVariant):
                 for t_var, count in Counter(tumour_nucs_no_ref_upper).items()
                 if normal_nucs_most_common.get(t_var, 0) < 2
             }
-            vars = []
+            variant_calls = []
             for putative_somatic_var, count in tumour_nucs_most_common.items():
                 if count > 4:
                     normal_count = normal_nucs_most_common.get(putative_somatic_var, 0)
                     p_value = CallVariant.caller(
-                        count, normal_count, len(tumour_nucs), len(normal_nucs)
+                        Counts(count, normal_count, len(tumour_nucs), len(normal_nucs))
                     )
                     if p_value < 0.01:
-                        vars.append((putative_somatic_var, p_value))
-            return vars if vars else np.nan
+                        variant_calls.append((putative_somatic_var, p_value))
+            if variant_calls:
+                if len(variant_calls) == 1:
+                    variant_calls.append(np.NaN)
+                return variant_calls
+            return np.NaN
 
         df[Schema.SINGLE_NUCLEOTIDE_CALLS] = df.apply(
             lambda x: test_putative_somatic_SNVs(
@@ -304,25 +330,27 @@ class CallSingleNucleotideVariant(CallVariant):
 
 class CallInsertionOrDeletion(CallVariant):
     def call(df: pd.DataFrame) -> pd.DataFrame:
-        def test_top_putative_somatic_indel(tumour_indels, reads_t, reads_n, res_n):
-            vars = []
-            if type(tumour_indels) != float:
-                freq_of_most_common_tumour_indel_in_normal = res_n.upper().count(
+        def test_top_putative_somatic_indel(
+            tumour_indels: int, reads_t: int, reads_n: int, res_n: int
+        ) -> list[tuple[str, float]] | float:
+            variant_calls = []
+            if not isinstance(tumour_indels, float):
+                freq_of_most_common_tumour_indel_in_normal: int = res_n.upper().count(
                     tumour_indels[0]
                 )
                 if freq_of_most_common_tumour_indel_in_normal < 2:
-                    normal_d = dict(
+                    normal_d: dict[str, int] = dict(
                         [(tumour_indels[0], freq_of_most_common_tumour_indel_in_normal)]
                     )
                     putative_somatic_var, count = tumour_indels
-                    if count > 4:
+                    if count > 8:
                         normal_count = normal_d.get(putative_somatic_var, 0)
                         p_value = CallVariant.caller(
-                            count, normal_count, reads_t, reads_n
+                            Counts(count, normal_count, reads_t, reads_n)
                         )
                         if p_value < 0.01:
-                            vars.append((putative_somatic_var, p_value))
-            return vars if vars else np.nan
+                            variant_calls.append((putative_somatic_var, p_value))
+            return variant_calls if variant_calls else np.NaN
 
         df[Schema.INDEL_CALLS] = df.apply(
             lambda x: test_top_putative_somatic_indel(
@@ -338,14 +366,18 @@ class CallInsertionOrDeletion(CallVariant):
 
 class CallStructuralVariant(CallVariant):
     def call(df: pd.DataFrame) -> pd.DataFrame:
-        def test_top_putative_somatic_SV(tumour_SVs, normal_SVs, reads_t, reads_n):
+        def test_top_putative_somatic_SV(
+            tumour_SVs: int, normal_SVs: int, reads_t: int, reads_n: int
+        ) -> list[tuple[str, float]] | float:
             # no limit as some reads naturally start and stop....
-            vars = []
-            if tumour_SVs > 4:
-                p_value = CallVariant.caller(tumour_SVs, normal_SVs, reads_t, reads_n)
+            variant_calls = []
+            if tumour_SVs > 8:
+                p_value = CallVariant.caller(
+                    Counts(tumour_SVs, normal_SVs, reads_t, reads_n)
+                )
                 if p_value < 0.01:
-                    vars.append(("SV", p_value))
-            return vars if vars else np.nan
+                    variant_calls.append(("SV", p_value))
+            return variant_calls if variant_calls else np.NaN
 
         df[Schema.STRUCTURAL_CALLS] = df.apply(
             lambda x: test_top_putative_somatic_SV(
@@ -357,6 +389,26 @@ class CallStructuralVariant(CallVariant):
             axis=1,
         )
         return df
+
+
+class removeNonCalls(CallVariant):
+    def call(df: pd.DataFrame) -> pd.DataFrame:
+        return df[
+            df[
+                [
+                    Schema.SINGLE_NUCLEOTIDE_CALLS,
+                    Schema.INDEL_CALLS,
+                    Schema.STRUCTURAL_CALLS,
+                ]
+            ]
+            .notna()
+            .any(1)
+        ]
+
+
+# class reformatCalls(CallVariant):
+#     def call(df: pd.DataFrame) -> pd.DataFrame:
+#         pass https://stackoverflow.com/questions/35491274/split-a-pandas-column-of-lists-into-multiple-columns
 
 
 class CallAllVaraints:
@@ -393,5 +445,5 @@ def process_genome_data(args: ArgumentParser, region: GenomicRegion) -> pd.DataF
     for sample_type in ["tumour", "normal"]:
         preprocessor = compose(sample_type, *pipe)
         df = preprocessor(df)
-    df = CallAllVaraints.get_calls(df)
-    return df[df[["SNV_calls", "INDEL_calls", "SV_calls"]].notna().any(1)]
+
+    return CallAllVaraints.get_calls(df)
