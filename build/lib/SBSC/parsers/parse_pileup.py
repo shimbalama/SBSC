@@ -32,8 +32,18 @@ class Schema:  # TODO ???drop 'pos_in_read', 'read_names'????
     QUALITY_FILTERED = "qual_filtred"
     RESULTS_INDELS = "res_indel"
     SINGLE_NUCLEOTIDE_CALLS = "SNV_calls"
+    A_CALLS = "A_calls"
+    T_CALLS = "T_calls"
+    C_CALLS = "C_calls"
+    G_CALLS = "G_calls"
+    A_PVALUE = "A_pvalue"
+    T_PVALUE = "T_pvalue"
+    C_PVALUE = "C_pvalue"
+    G_PVALUE = "G_pvalue"
     INDEL_CALLS = "INDEL_calls"
     STRUCTURAL_CALLS = "SV_calls"
+    INDEL_PVALUE = "INDEL_pvalue"
+    STRUCTURAL_PVALUE = "SV_pvalue"
     HOMOPOLYMER = "In_or_ajacent_to_homopolymer_of_length"
     READ_DEPTH_POST_FILTER = "read_depth_post_filtering"
 
@@ -290,7 +300,7 @@ class CallSingleNucleotideVariant(CallVariant):
         """Call SNVs"""
 
         def test_putative_somatic_SNVs(
-            tumour_nucs: str, normal_nucs: str, ref: str
+            nuc: str, tumour_nucs: str, normal_nucs: str, ref: str
         ) -> list[tuple[str, float]] | float:
             normal_nucs_upper = convert_to_upper(normal_nucs, ref)
             tumour_nucs_no_ref_upper = remove_ref_from_tumour_res(
@@ -302,23 +312,47 @@ class CallSingleNucleotideVariant(CallVariant):
                 for t_var, count in Counter(tumour_nucs_no_ref_upper).items()
                 if normal_nucs_most_common.get(t_var, 0) < 2
             }
-            variant_calls = []
             for putative_somatic_var, count in tumour_nucs_most_common.items():
-                if count > 4:
+                if putative_somatic_var == nuc and count > 4:
                     normal_count = normal_nucs_most_common.get(putative_somatic_var, 0)
                     p_value = CallVariant.caller(
                         Counts(count, normal_count, len(tumour_nucs), len(normal_nucs))
                     )
                     if p_value < 0.01:
-                        variant_calls.append((putative_somatic_var, p_value))
-            if variant_calls:
-                if len(variant_calls) == 1:
-                    variant_calls.append(np.NaN)
-                return variant_calls
+                        return putative_somatic_var, p_value
+
             return np.NaN
 
-        df[Schema.SINGLE_NUCLEOTIDE_CALLS] = df.apply(
-            lambda x: test_putative_somatic_SNVs(
+        test_a = partial(test_putative_somatic_SNVs, "A")
+        df[Schema.A_CALLS] = df.apply(
+            lambda x: test_a(
+                x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_tumour"],
+                x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_normal"],
+                x[Schema.REFERENCE],
+            ),
+            axis=1,
+        )
+        test_t = partial(test_putative_somatic_SNVs, "T")
+        df[Schema.T_CALLS] = df.apply(
+            lambda x: test_t(
+                x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_tumour"],
+                x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_normal"],
+                x[Schema.REFERENCE],
+            ),
+            axis=1,
+        )
+        test_c = partial(test_putative_somatic_SNVs, "C")
+        df[Schema.C_CALLS] = df.apply(
+            lambda x: test_c(
+                x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_tumour"],
+                x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_normal"],
+                x[Schema.REFERENCE],
+            ),
+            axis=1,
+        )
+        test_g = partial(test_putative_somatic_SNVs, "G")
+        df[Schema.G_CALLS] = df.apply(
+            lambda x: test_g(
                 x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_tumour"],
                 x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_normal"],
                 x[Schema.REFERENCE],
@@ -329,11 +363,12 @@ class CallSingleNucleotideVariant(CallVariant):
 
 
 class CallInsertionOrDeletion(CallVariant):
+    """Test if the most common INDEL is significantly more present in tumour"""
+
     def call(df: pd.DataFrame) -> pd.DataFrame:
         def test_top_putative_somatic_indel(
             tumour_indels: int, reads_t: int, reads_n: int, res_n: int
         ) -> list[tuple[str, float]] | float:
-            variant_calls = []
             if not isinstance(tumour_indels, float):
                 freq_of_most_common_tumour_indel_in_normal: int = res_n.upper().count(
                     tumour_indels[0]
@@ -342,15 +377,15 @@ class CallInsertionOrDeletion(CallVariant):
                     normal_d: dict[str, int] = dict(
                         [(tumour_indels[0], freq_of_most_common_tumour_indel_in_normal)]
                     )
-                    putative_somatic_var, count = tumour_indels
+                    putative_somatic_INDEL, count = tumour_indels
                     if count > 8:
-                        normal_count = normal_d.get(putative_somatic_var, 0)
+                        normal_count = normal_d.get(putative_somatic_INDEL, 0)
                         p_value = CallVariant.caller(
                             Counts(count, normal_count, reads_t, reads_n)
                         )
                         if p_value < 0.01:
-                            variant_calls.append((putative_somatic_var, p_value))
-            return variant_calls if variant_calls else np.NaN
+                            return putative_somatic_INDEL, p_value
+            return np.NaN
 
         df[Schema.INDEL_CALLS] = df.apply(
             lambda x: test_top_putative_somatic_indel(
@@ -365,19 +400,21 @@ class CallInsertionOrDeletion(CallVariant):
 
 
 class CallStructuralVariant(CallVariant):
+    """Test if there are significantly more SVs in tumour"""
+
     def call(df: pd.DataFrame) -> pd.DataFrame:
         def test_top_putative_somatic_SV(
             tumour_SVs: int, normal_SVs: int, reads_t: int, reads_n: int
         ) -> list[tuple[str, float]] | float:
             # no limit as some reads naturally start and stop....
-            variant_calls = []
+            #TODO - can check flags and exclude those that aren't mapped chimerically
             if tumour_SVs > 8:
                 p_value = CallVariant.caller(
                     Counts(tumour_SVs, normal_SVs, reads_t, reads_n)
                 )
                 if p_value < 0.01:
-                    variant_calls.append(("SV", p_value))
-            return variant_calls if variant_calls else np.NaN
+                    return "SV", p_value
+            return np.NaN
 
         df[Schema.STRUCTURAL_CALLS] = df.apply(
             lambda x: test_top_putative_somatic_SV(
@@ -392,25 +429,38 @@ class CallStructuralVariant(CallVariant):
 
 
 class removeNonCalls(CallVariant):
+    """Remove all rows that are NaN for SNV, INDEL and SV calls"""
+
     def call(df: pd.DataFrame) -> pd.DataFrame:
-        return df[
-            df[
-                [
-                    Schema.SINGLE_NUCLEOTIDE_CALLS,
-                    Schema.INDEL_CALLS,
-                    Schema.STRUCTURAL_CALLS,
-                ]
-            ]
-            .notna()
-            .any(1)
+        cols = [
+            Schema.A_CALLS,
+            Schema.T_CALLS,
+            Schema.C_CALLS,
+            Schema.G_CALLS,
+            Schema.INDEL_CALLS,
+            Schema.STRUCTURAL_CALLS,
         ]
+        return df[df[cols].notna().any(1)]
 
 
-# class reformatCalls(CallVariant):
-#     def call(df: pd.DataFrame) -> pd.DataFrame:
-#         pass https://stackoverflow.com/questions/35491274/split-a-pandas-column-of-lists-into-multiple-columns
+class reformatSNVCalls(CallVariant):
+    def call(df: pd.DataFrame) -> pd.DataFrame:
+        # https://stackoverflow.com/questions/35491274/split-a-pandas-column-of-lists-into-multiple-columns
+        df[[Schema.A_CALLS, Schema.A_PVALUE]] = pd.DataFrame(df[Schema.A_CALLS].tolist(), index=df.index)
+        df[[Schema.T_CALLS, Schema.T_PVALUE]] = pd.DataFrame(df[Schema.T_CALLS].tolist(), index=df.index)
+        df[[Schema.C_CALLS, Schema.C_PVALUE]] = pd.DataFrame(df[Schema.C_CALLS].tolist(), index=df.index)
+        df[[Schema.G_CALLS, Schema.G_PVALUE]] = pd.DataFrame(df[Schema.G_CALLS].tolist(), index=df.index)
+        df[[Schema.INDEL_CALLS, Schema.INDEL_PVALUE]] = pd.DataFrame(df[Schema.INDEL_CALLS].tolist(), index=df.index)
+        df[[Schema.STRUCTURAL_CALLS, Schema.STRUCTURAL_PVALUE]] = pd.DataFrame(df[Schema.STRUCTURAL_CALLS].tolist(), index=df.index)
+        return df
+        
 
 
+# inelegant but will work...
+# df_snv = df[df.SNV_calls.notna()]
+# df_snv[['SNV_calls1', 'SNV_calls2']] = pd.DataFrame(df_snv.SNV_calls.tolist(), index=df_snv.index)
+# df_snv[['SNV_call1', 'SNV_call1_phred']] = pd.DataFrame(df_snv.SNV_calls1.tolist(), index=df_snv.index)
+# df_snv
 class CallAllVaraints:
     """Call each variant type and update df"""
 
