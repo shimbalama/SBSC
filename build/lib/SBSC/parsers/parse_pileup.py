@@ -281,7 +281,7 @@ class CallVariant(ABC):
     def call() -> None:
         pass
 
-    @staticmethod
+    @staticmethod #this interface is now not applicable to all TODO
     def caller(var_counts: Counts) -> float:
         """Return p value from fisher exact test of given reads counts"""
         _, p_value = stats.fisher_exact(
@@ -442,9 +442,23 @@ class removeNonCalls(CallVariant):
         ]
         return df[df[cols].notna().any(1)]
 
+class replaceNaN(CallVariant):
+    def call(df: pd.DataFrame) -> pd.DataFrame:
+        cols = [
+            Schema.A_CALLS,
+            Schema.T_CALLS,
+            Schema.C_CALLS,
+            Schema.G_CALLS,
+            Schema.INDEL_CALLS,
+            Schema.STRUCTURAL_CALLS,
+        ]
+        df.loc[:,cols] = df.loc[:,cols].applymap(lambda x: (np.NaN, np.NaN) if pd.isna(x) else x)
+        return df
 
 class reformatSNVCalls(CallVariant):
     def call(df: pd.DataFrame) -> pd.DataFrame:
+        if df.empty:
+            return df
         # https://stackoverflow.com/questions/35491274/split-a-pandas-column-of-lists-into-multiple-columns
         df[[Schema.A_CALLS, Schema.A_PVALUE]] = pd.DataFrame(df[Schema.A_CALLS].tolist(), index=df.index)
         df[[Schema.T_CALLS, Schema.T_PVALUE]] = pd.DataFrame(df[Schema.T_CALLS].tolist(), index=df.index)
@@ -455,8 +469,8 @@ class reformatSNVCalls(CallVariant):
         return df
         
 
+# inelegant but will work... df[['T_calls', 'T_calls_pvalue']] = pd.DataFrame(df.T_calls.tolist(), index=df.index)
 
-# inelegant but will work...
 # df_snv = df[df.SNV_calls.notna()]
 # df_snv[['SNV_calls1', 'SNV_calls2']] = pd.DataFrame(df_snv.SNV_calls.tolist(), index=df_snv.index)
 # df_snv[['SNV_call1', 'SNV_call1_phred']] = pd.DataFrame(df_snv.SNV_calls1.tolist(), index=df_snv.index)
