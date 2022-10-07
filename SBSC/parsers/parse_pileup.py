@@ -5,7 +5,7 @@ from argparse import ArgumentParser
 from collections import Counter
 from dataclasses import dataclass
 from functools import partial, reduce
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
@@ -14,6 +14,7 @@ import scipy.stats as stats
 from SBSC.parsers.parse_pile import GenomicRegion
 
 
+#might slip this schema into tmp/final TODO
 class Schema:  # TODO ???drop 'pos_in_read', 'read_names'????
     CHROMOSOME = "seq"
     POSITION = "pos"
@@ -47,6 +48,10 @@ class Schema:  # TODO ???drop 'pos_in_read', 'read_names'????
     HOMOPOLYMER = "In_or_ajacent_to_homopolymer_of_length"
     READ_DEPTH_POST_FILTER = "read_depth_post_filtering"
 
+@dataclass
+class Inputs:
+    
+
 
 def create_df(region: GenomicRegion, pileup: str) -> pd.DataFrame:
     """Converts a genomic region of a pileup to a df"""
@@ -62,6 +67,21 @@ def create_df(region: GenomicRegion, pileup: str) -> pd.DataFrame:
     df = df.astype({"reads": "int64", "pos": "int64"})
     return df
 
+def fill_df(input_data: Inputs):
+    logging.info(f"Creating a df for {str(region)}")
+    df_tumour = create_df(region, args.cancer_pile)
+    df_normal = create_df(region, args.normal_pile)
+    df = df_normal.join(df_tumour, how="inner", lsuffix="_normal", rsuffix="_tumour")
+    if df.empty:
+        logging.warn(f"Genomic region {str(region)} has no data in pileup")
+        return None
+    for col in [Schema.REFERENCE, Schema.CHROMOSOME, Schema.POSITION]:
+        df = remove_redundant_column(df, col)
+    check_the_ref_seq_matches_the_pileup_seq(df, region)
+    df = remove_positions_with_little_support_for_somatic_var(df)
+    df = add_homoploymers(df, region.homopolymer_lengths)
+
+    return df
 
 def remove_positions_with_little_support_for_somatic_var(
     df: pd.DataFrame,
@@ -112,13 +132,12 @@ def check_the_ref_seq_matches_the_pileup_seq(
             )
         del df["seq_from_ref"]
     else:
-        logging.warn(
-            f"skipping ref check for {region.__str__()} due to length missmatch: \
-            df={len(df)} and len seq={len(region.seq)}"
+        logging.info(
+            "skipping ref check for %s due to length missmatch: \
+            df=%s and len seq=%s", str(region), len(df), len(region.seq)
         )
 
-
-def add_homoploymers(df: pd.DataFrame, region: dict) -> pd.DataFrame:
+def add_homoploymers(df: pd.DataFrame, region: dict[int, int]) -> pd.DataFrame:
     """Adds a homopolymer column to df"""
     df[Schema.HOMOPOLYMER] = df[Schema.POSITION].apply(lambda x: region.get(x, 0))
 
@@ -164,49 +183,51 @@ def convert_to_upper(res: str, ref: str) -> str:
     return res.replace(",", ref).replace(".", ref).replace("*", "").upper()
 
 
-def remove_ref_from_tumour_res(res_n: str, res_t: str, ref: str) -> str:
+def remove_ref_from_tumour_res(normal_results: str, tumour_results: str, ref: str) -> str:
     """Removes any reference seq from the tumour results str"""
-    most_common_base_in_normal = Counter(convert_to_upper(res_n, ref)).most_common()[0][
-        0
-    ]
-    return convert_to_upper(res_t, ref).replace(most_common_base_in_normal, "")
+    most_common_base_in_normal = Counter(convert_to_upper(normal_results, ref)).most_common()[0][0]
+    return convert_to_upper(tumour_results, ref).replace(most_common_base_in_normal, "")
 
+def correct_regex(regex_result: list[str]) -> list[str]:
+    '''Helper function for removing indels from str'''
+    corected_regex_result: list[str] = []  
+    # can't find other way to stop regex adding unrelated nucs at end
+    for indel in regex_result:
+        indel_len = "".join(char for char in indel if char.isdigit())
+        indel_nucs = "".join(char for char in indel if char.isalpha())[
+            : int(indel_len)
+        ]
+        corected_regex_result.append("".join([indel[0], indel_len, indel_nucs]))
+    return corected_regex_result
 
-def separate_indels_from_res(sample_type: str, df: pd.DataFrame) -> pd.DataFrame:
+def remove_indels_from_results_str(sample_type: str, df: pd.DataFrame) -> pd.DataFrame:
     """Separates the indels out from the pre-processed results str"""
 
-    def find_indels_in_res(res: str) -> pd.Series:
-        regex_result = re.findall("\+[0-9]+[ACGTNacgtn]+|\-[0-9]+[ACGTNacgtn]+", res)
-        corected_regex_result: list[
-            str
-        ] = []  # can't find other way to stop regex adding unrelated nucs at end
-        for indel in regex_result:
-            indel_len = "".join(char for char in indel if char.isdigit())
-            indel_nucs = "".join(char for char in indel if char.isalpha())[
-                : int(indel_len)
-            ]
-            corected_regex_result.append("".join([indel[0], indel_len, indel_nucs]))
+    def find_and_remove_indels(res: str) -> str:
+        regex_result: list[str] = re.findall("\+[0-9]+[ACGTNacgtn]+|\-[0-9]+[ACGTNacgtn]+", res)
+        corected_regex_result = correct_regex(regex_result) 
         indel_count = Counter(corected_regex_result)
         for indel in indel_count.keys():
             res = "".join(res.split(indel))
-        most_seen_indel = indel_count.most_common()[0] if indel_count else "NA"
-        most_seen_indel_upper = (
-            np.nan
-            if most_seen_indel == "NA"
-            else (most_seen_indel[0].upper(), most_seen_indel[1])
-        )
-        res = "".join(char for char in res if char in ".,ATCGatcg*")
-        return pd.Series([res, most_seen_indel_upper])
+        return "".join(char for char in res if char in ".,ATCGatcg*")
 
     nucs = f"{Schema.RESULTS_NUCLEOTIDES}_{sample_type}"
     qual = f"{Schema.QUALITY}_{sample_type}"
-    df[[nucs, f"{Schema.RESULTS_INDELS}_{sample_type}"]] = df[
-        f"{Schema.RESULTS_NO_CARET}_{sample_type}"
-    ].apply(find_indels_in_res)
-    assert df[nucs].str.len().equals(df[qual].str.len())
-    f"{nucs} and {qual} should have same length"
+    df[nucs] = df[f"{Schema.RESULTS_NO_CARET}_{sample_type}"].apply(find_and_remove_indels)
+    assert df[nucs].str.len().equals(df[qual].str.len()); f"{nucs} and {qual} should have same length"
     return df
 
+def find_indels_in_results_str(sample_type: str, df: pd.DataFrame) -> pd.DataFrame:
+    """Separates the indels out from the pre-processed results str"""
+
+    def find_indels_in_res(res: str) -> tuple[str, int] | float:
+        regex_result = re.findall("\+[0-9]+[ACGTN]+|\-[0-9]+[ACGTN]+", res.upper())
+        corected_regex_result = correct_regex(regex_result)
+        indel_count = Counter(corected_regex_result)    
+        return indel_count.most_common()[0] if indel_count else np.NaN
+
+    df[f"{Schema.RESULTS_INDELS}_{sample_type}"] = df[f"{Schema.RESULTS_NO_CARET}_{sample_type}"].apply(find_indels_in_res)
+    return df
 
 def remove_low_quality_bases(
     sample_type: str, df: pd.DataFrame, phred: int
@@ -215,13 +236,12 @@ def remove_low_quality_bases(
     return filtered bases and coresponding phred"""
 
     def filter_on_base_qual(res: str, qual: int) -> pd.Series:
-        new_res, new_qual = "", ""
+        new_res: str, new_qual: str = "", ""
         for base, quality in zip(res, qual):
             if (ord(quality) - 33) > phred:
                 new_res += base
                 new_qual += quality
-        assert len(new_res) == len(new_qual)
-        "resuts should match qualities"
+        assert len(new_res) == len(new_qual); "resuts should match qualities"
         return pd.Series([new_res, new_qual])
 
     df[
@@ -301,21 +321,21 @@ class CallSingleNucleotideVariant(CallVariant):
 
         def test_putative_somatic_SNVs(
             nuc: str, tumour_nucs: str, normal_nucs: str, ref: str
-        ) -> list[tuple[str, float]] | float:
+        ) -> tuple[str, float] | float:
             normal_nucs_upper = convert_to_upper(normal_nucs, ref)
             tumour_nucs_no_ref_upper = remove_ref_from_tumour_res(
                 normal_nucs, tumour_nucs, ref
             )
-            normal_nucs_most_common = dict(Counter(normal_nucs_upper).most_common())
-            tumour_nucs_most_common = {
+            normal_nucs_most_common: dict[str, int] = dict(Counter(normal_nucs_upper).most_common())
+            tumour_nucs_most_common: dict[str, int] = {
                 t_var: count
                 for t_var, count in Counter(tumour_nucs_no_ref_upper).items()
                 if normal_nucs_most_common.get(t_var, 0) < 2
             }
             for putative_somatic_var, count in tumour_nucs_most_common.items():
                 if putative_somatic_var == nuc and count > 4:
-                    normal_count = normal_nucs_most_common.get(putative_somatic_var, 0)
-                    p_value = CallVariant.caller(
+                    normal_count: int = normal_nucs_most_common.get(putative_somatic_var, 0)
+                    p_value: float = CallVariant.caller(
                         Counts(count, normal_count, len(tumour_nucs), len(normal_nucs))
                     )
                     if p_value < 0.01:
@@ -323,42 +343,21 @@ class CallSingleNucleotideVariant(CallVariant):
 
             return np.NaN
 
-        test_a = partial(test_putative_somatic_SNVs, "A")
-        df[Schema.A_CALLS] = df.apply(
-            lambda x: test_a(
-                x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_tumour"],
-                x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_normal"],
-                x[Schema.REFERENCE],
-            ),
-            axis=1,
-        )
-        test_t = partial(test_putative_somatic_SNVs, "T")
-        df[Schema.T_CALLS] = df.apply(
-            lambda x: test_t(
-                x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_tumour"],
-                x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_normal"],
-                x[Schema.REFERENCE],
-            ),
-            axis=1,
-        )
-        test_c = partial(test_putative_somatic_SNVs, "C")
-        df[Schema.C_CALLS] = df.apply(
-            lambda x: test_c(
-                x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_tumour"],
-                x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_normal"],
-                x[Schema.REFERENCE],
-            ),
-            axis=1,
-        )
-        test_g = partial(test_putative_somatic_SNVs, "G")
-        df[Schema.G_CALLS] = df.apply(
-            lambda x: test_g(
-                x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_tumour"],
-                x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_normal"],
-                x[Schema.REFERENCE],
-            ),
-            axis=1,
-        )
+        for col, nuc in [
+            (Schema.A_CALLS, 'A'),
+            (Schema.T_CALLS, 'T'),
+            (Schema.C_CALLS, 'C'),
+            (Schema.G_CALLS, 'G')
+        ]:
+            test = partial(test_putative_somatic_SNVs, nuc)
+            df[col] = df.apply(
+                lambda x: test(
+                    x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_tumour"],
+                    x[f"{Schema.RESULTS_NUCLEOTIDES_FILTERED}_normal"],
+                    x[Schema.REFERENCE],
+                ),
+                axis=1,
+            )
         return df
 
 
@@ -368,7 +367,7 @@ class CallInsertionOrDeletion(CallVariant):
     def call(df: pd.DataFrame) -> pd.DataFrame:
         def test_top_putative_somatic_indel(
             tumour_indels: int, reads_t: int, reads_n: int, res_n: int
-        ) -> list[tuple[str, float]] | float:
+        ) -> tuple[str, float] | float:
             if not isinstance(tumour_indels, float):
                 freq_of_most_common_tumour_indel_in_normal: int = res_n.upper().count(
                     tumour_indels[0]
@@ -380,7 +379,7 @@ class CallInsertionOrDeletion(CallVariant):
                     putative_somatic_INDEL, count = tumour_indels
                     if count > 8:
                         normal_count = normal_d.get(putative_somatic_INDEL, 0)
-                        p_value = CallVariant.caller(
+                        p_value: float = CallVariant.caller(
                             Counts(count, normal_count, reads_t, reads_n)
                         )
                         if p_value < 0.01:
@@ -477,24 +476,14 @@ class CallAllVaraints:
         return df
 
 
-def process_genome_data(args: ArgumentParser, region: GenomicRegion) -> pd.DataFrame:
+def process_genome_data(args: ArgumentParser, region: GenomicRegion) -> pd.DataFrame | None:
     # load the data from the pileup file
-    logging.info(f"Creating a df for {region.__str__()}")
-    df_tumour = create_df(region, args.cancer_pile)
-    df_normal = create_df(region, args.normal_pile)
-    df = df_normal.join(df_tumour, how="inner", lsuffix="_normal", rsuffix="_tumour")
-    if df.empty:
-        logging.warn(f"Genomic region {region.__str__()} has no data in pileup")
-        return None
-    for col in [Schema.REFERENCE, Schema.CHROMOSOME, Schema.POSITION]:
-        df = remove_redundant_column(df, col)
-    check_the_ref_seq_matches_the_pileup_seq(df, region)
-    df = remove_positions_with_little_support_for_somatic_var(df)
-    df = add_homoploymers(df, region.homopolymer_lengths)
+    df = fill_df()
     pipe = [
         create_SV_column,
         remove_carrots_from_res,
-        separate_indels_from_res,
+        remove_indels_from_results_str,
+        find_indels_in_results_str,
         partial(remove_low_quality_bases, phred=args.min_base_qual),
         get_read_depth_after_filtering,
     ]
