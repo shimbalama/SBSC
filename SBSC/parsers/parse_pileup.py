@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import pysam
 import scipy.stats as stats
+from matplotlib.path import Path
 from SBSC.parsers.parse_pile import GenomicRegion
 
 
@@ -49,14 +50,14 @@ class Schema:  # TODO ???drop 'pos_in_read', 'read_names'????
     READ_DEPTH_POST_FILTER = "read_depth_post_filtering"
 
 @dataclass
-class Inputs:
-    
+class Pileups:
+    cancer_pileup: Path
+    normal_pileup: Path
 
-
-def create_df(region: GenomicRegion, pileup: str) -> pd.DataFrame:
+def create_df(region: GenomicRegion, pileup: Path) -> pd.DataFrame:
     """Converts a genomic region of a pileup to a df"""
     keys = [name for schema, name in vars(Schema).items() if "__" not in schema][:10]
-    tabixfile = pysam.TabixFile(pileup)
+    tabixfile = pysam.TabixFile(str(pileup))
     coords: list[Any] = ["chr" + str(region.chrom), region.start, region.end + 1]
     df = pd.DataFrame(
         [line.split("\t") for line in tabixfile.fetch(*coords)], columns=keys
@@ -67,14 +68,11 @@ def create_df(region: GenomicRegion, pileup: str) -> pd.DataFrame:
     df = df.astype({"reads": "int64", "pos": "int64"})
     return df
 
-def fill_df(input_data: Inputs):
+def fill_df(input_data: Pileups, region: GenomicRegion) -> pd.DataFrame:
     logging.info(f"Creating a df for {str(region)}")
-    df_tumour = create_df(region, args.cancer_pile)
-    df_normal = create_df(region, args.normal_pile)
+    df_tumour = create_df(region, input_data.cancer_pileup)
+    df_normal = create_df(region, input_data.normal_pileup)
     df = df_normal.join(df_tumour, how="inner", lsuffix="_normal", rsuffix="_tumour")
-    if df.empty:
-        logging.warn(f"Genomic region {str(region)} has no data in pileup")
-        return None
     for col in [Schema.REFERENCE, Schema.CHROMOSOME, Schema.POSITION]:
         df = remove_redundant_column(df, col)
     check_the_ref_seq_matches_the_pileup_seq(df, region)
@@ -146,10 +144,10 @@ def add_homoploymers(df: pd.DataFrame, region: dict[int, int]) -> pd.DataFrame:
 
 def create_SV_column(sample_type: str, df: pd.DataFrame) -> pd.DataFrame:
     """Adds SV column to df"""
-    col = f"{Schema.RESULTS}_{sample_type}"
-    df[f"{Schema.STRUCTURAL_VARIANTS}_{sample_type}"] = df[col].str.count("^") + df[
-        col
-    ].str.count("$")
+
+    results_col = f"{Schema.RESULTS}_{sample_type}"
+    SV_col = f"{Schema.STRUCTURAL_VARIANTS}_{sample_type}"
+    df[SV_col] = df[results_col].str.count("^") + df[results_col].str.count("$")
     return df
 
 
@@ -236,7 +234,7 @@ def remove_low_quality_bases(
     return filtered bases and coresponding phred"""
 
     def filter_on_base_qual(res: str, qual: int) -> pd.Series:
-        new_res: str, new_qual: str = "", ""
+        new_res, new_qual = "", ""
         for base, quality in zip(res, qual):
             if (ord(quality) - 33) > phred:
                 new_res += base
@@ -476,15 +474,18 @@ class CallAllVaraints:
         return df
 
 
-def process_genome_data(args: ArgumentParser, region: GenomicRegion) -> pd.DataFrame | None:
+def process_genome_data(piles: Pileups, min_base_qual: int, region: GenomicRegion) -> pd.DataFrame | None:
     # load the data from the pileup file
-    df = fill_df()
+    df = fill_df(piles, region)
+    if df.empty:
+        logging.warn(f"Genomic region {str(region)} has no data in pileup")
+        return None
     pipe = [
         create_SV_column,
         remove_carrots_from_res,
         remove_indels_from_results_str,
         find_indels_in_results_str,
-        partial(remove_low_quality_bases, phred=args.min_base_qual),
+        partial(remove_low_quality_bases, phred=min_base_qual),
         get_read_depth_after_filtering,
     ]
     for sample_type in ["tumour", "normal"]:

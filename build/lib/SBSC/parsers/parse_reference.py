@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import pandas as pd
 from Bio import SeqIO
@@ -82,7 +83,7 @@ class GenomicRegion:
         return self.get_hom_pol_lengths()
 
 
-def chunk_ref(size: int, reference: str, chroms: list[str]):
+def chunk_ref(size: int, reference: Path, chroms: list[str]):
     """
     Split ref into chunks for parallel processing
     """
