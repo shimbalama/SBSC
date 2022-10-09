@@ -518,3 +518,401 @@ WARNING:root:Genomic region 17:83120000-83129999 has no data in pileup
 INFO:root:Creating a df for 17:83130000-83139999
 INFO:root:skipping ref check for 17:83130000-83139999 due to length missmatch:             df=0 and len seq=10000
 WARNING:root:Genomic region 17:83130000-83139999 has no data in pileup
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76150000-76159999
+INFO:root:Creating a df for 17:76190000-76199999
+INFO:root:Creating a df for 17:76200000-76209999
+INFO:root:Creating a df for 17:76160000-76169999
+INFO:root:Creating a df for 17:76210000-76219999
+INFO:root:Creating a df for 17:76170000-76179999
+INFO:root:Creating a df for 17:76220000-76229999
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:76240000-76249999
+INFO:root:skipping ref check for 17:76240000-76249999 due to length missmatch:             df=493 and len seq=10000
+INFO:root:Creating a df for 17:83120000-83129999
+INFO:root:skipping ref check for 17:83120000-83129999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83120000-83129999 has no data in pileup
+INFO:root:Creating a df for 17:83130000-83139999
+INFO:root:skipping ref check for 17:83130000-83139999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83130000-83139999 has no data in pileup
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76150000-76159999
+INFO:root:Creating a df for 17:76190000-76199999
+INFO:root:Creating a df for 17:76200000-76209999
+INFO:root:Creating a df for 17:76160000-76169999
+INFO:root:Creating a df for 17:76210000-76219999
+INFO:root:Creating a df for 17:76170000-76179999
+INFO:root:Creating a df for 17:76220000-76229999
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:76240000-76249999
+INFO:root:skipping ref check for 17:76240000-76249999 due to length missmatch:             df=493 and len seq=10000
+INFO:root:Creating a df for 17:83120000-83129999
+INFO:root:skipping ref check for 17:83120000-83129999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83120000-83129999 has no data in pileup
+INFO:root:Creating a df for 17:83130000-83139999
+INFO:root:skipping ref check for 17:83130000-83139999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83130000-83139999 has no data in pileup
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76150000-76159999
+INFO:root:Creating a df for 17:76190000-76199999
+INFO:root:Creating a df for 17:76200000-76209999
+INFO:root:Creating a df for 17:76160000-76169999
+INFO:root:Creating a df for 17:76210000-76219999
+INFO:root:Creating a df for 17:76170000-76179999
+INFO:root:Creating a df for 17:76220000-76229999
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:76240000-76249999
+INFO:root:skipping ref check for 17:76240000-76249999 due to length missmatch:             df=493 and len seq=10000
+INFO:root:Creating a df for 17:83120000-83129999
+INFO:root:skipping ref check for 17:83120000-83129999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83120000-83129999 has no data in pileup
+INFO:root:Creating a df for 17:83130000-83139999
+INFO:root:skipping ref check for 17:83130000-83139999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83130000-83139999 has no data in pileup
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76150000-76159999
+INFO:root:Creating a df for 17:76190000-76199999
+INFO:root:Creating a df for 17:76200000-76209999
+INFO:root:Creating a df for 17:76160000-76169999
+INFO:root:Creating a df for 17:76210000-76219999
+INFO:root:Creating a df for 17:76170000-76179999
+INFO:root:Creating a df for 17:76220000-76229999
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:76240000-76249999
+INFO:root:skipping ref check for 17:76240000-76249999 due to length missmatch:             df=493 and len seq=10000
+INFO:root:Creating a df for 17:83120000-83129999
+INFO:root:skipping ref check for 17:83120000-83129999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83120000-83129999 has no data in pileup
+INFO:root:Creating a df for 17:83130000-83139999
+INFO:root:skipping ref check for 17:83130000-83139999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83130000-83139999 has no data in pileup
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76150000-76159999
+INFO:root:Creating a df for 17:76190000-76199999
+INFO:root:Creating a df for 17:76200000-76209999
+INFO:root:Creating a df for 17:76160000-76169999
+INFO:root:Creating a df for 17:76210000-76219999
+INFO:root:Creating a df for 17:76170000-76179999
+INFO:root:Creating a df for 17:76220000-76229999
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:76240000-76249999
+INFO:root:skipping ref check for 17:76240000-76249999 due to length missmatch:             df=493 and len seq=10000
+INFO:root:Creating a df for 17:83120000-83129999
+INFO:root:skipping ref check for 17:83120000-83129999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83120000-83129999 has no data in pileup
+INFO:root:Creating a df for 17:83130000-83139999
+INFO:root:skipping ref check for 17:83130000-83139999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83130000-83139999 has no data in pileup
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76150000-76159999
+INFO:root:Creating a df for 17:76190000-76199999
+INFO:root:Creating a df for 17:76200000-76209999
+INFO:root:Creating a df for 17:76160000-76169999
+INFO:root:Creating a df for 17:76210000-76219999
+INFO:root:Creating a df for 17:76170000-76179999
+INFO:root:Creating a df for 17:76220000-76229999
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:76240000-76249999
+INFO:root:skipping ref check for 17:76240000-76249999 due to length missmatch:             df=493 and len seq=10000
+INFO:root:Creating a df for 17:83120000-83129999
+INFO:root:skipping ref check for 17:83120000-83129999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83120000-83129999 has no data in pileup
+INFO:root:Creating a df for 17:83130000-83139999
+INFO:root:skipping ref check for 17:83130000-83139999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83130000-83139999 has no data in pileup
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76150000-76159999
+INFO:root:Creating a df for 17:76190000-76199999
+INFO:root:Creating a df for 17:76200000-76209999
+INFO:root:Creating a df for 17:76160000-76169999
+INFO:root:Creating a df for 17:76210000-76219999
+INFO:root:Creating a df for 17:76170000-76179999
+INFO:root:Creating a df for 17:76220000-76229999
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:76240000-76249999
+INFO:root:skipping ref check for 17:76240000-76249999 due to length missmatch:             df=493 and len seq=10000
+INFO:root:Creating a df for 17:83120000-83129999
+INFO:root:skipping ref check for 17:83120000-83129999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83120000-83129999 has no data in pileup
+INFO:root:Creating a df for 17:83130000-83139999
+INFO:root:skipping ref check for 17:83130000-83139999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83130000-83139999 has no data in pileup
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76150000-76159999
+INFO:root:Creating a df for 17:76190000-76199999
+INFO:root:Creating a df for 17:76200000-76209999
+INFO:root:Creating a df for 17:76160000-76169999
+INFO:root:Creating a df for 17:76210000-76219999
+INFO:root:Creating a df for 17:76170000-76179999
+INFO:root:Creating a df for 17:76220000-76229999
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:76240000-76249999
+INFO:root:skipping ref check for 17:76240000-76249999 due to length missmatch:             df=493 and len seq=10000
+INFO:root:Creating a df for 17:83120000-83129999
+INFO:root:skipping ref check for 17:83120000-83129999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83120000-83129999 has no data in pileup
+INFO:root:Creating a df for 17:83130000-83139999
+INFO:root:skipping ref check for 17:83130000-83139999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83130000-83139999 has no data in pileup
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76150000-76159999
+INFO:root:Creating a df for 17:76190000-76199999
+INFO:root:Creating a df for 17:76200000-76209999
+INFO:root:Creating a df for 17:76160000-76169999
+INFO:root:Creating a df for 17:76210000-76219999
+INFO:root:Creating a df for 17:76170000-76179999
+INFO:root:Creating a df for 17:76220000-76229999
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:76240000-76249999
+INFO:root:skipping ref check for 17:76240000-76249999 due to length missmatch:             df=493 and len seq=10000
+INFO:root:Creating a df for 17:83120000-83129999
+INFO:root:skipping ref check for 17:83120000-83129999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83120000-83129999 has no data in pileup
+INFO:root:Creating a df for 17:83130000-83139999
+INFO:root:skipping ref check for 17:83130000-83139999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83130000-83139999 has no data in pileup
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76150000-76159999
+INFO:root:Creating a df for 17:76190000-76199999
+INFO:root:Creating a df for 17:76200000-76209999
+INFO:root:Creating a df for 17:76160000-76169999
+INFO:root:Creating a df for 17:76210000-76219999
+INFO:root:Creating a df for 17:76170000-76179999
+INFO:root:Creating a df for 17:76220000-76229999
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:76240000-76249999
+INFO:root:skipping ref check for 17:76240000-76249999 due to length missmatch:             df=493 and len seq=10000
+INFO:root:Creating a df for 17:83120000-83129999
+INFO:root:skipping ref check for 17:83120000-83129999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83120000-83129999 has no data in pileup
+INFO:root:Creating a df for 17:83130000-83139999
+INFO:root:skipping ref check for 17:83130000-83139999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83130000-83139999 has no data in pileup
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76150000-76159999
+INFO:root:Creating a df for 17:76190000-76199999
+INFO:root:Creating a df for 17:76200000-76209999
+INFO:root:Creating a df for 17:76160000-76169999
+INFO:root:Creating a df for 17:76210000-76219999
+INFO:root:Creating a df for 17:76170000-76179999
+INFO:root:Creating a df for 17:76220000-76229999
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:76240000-76249999
+INFO:root:skipping ref check for 17:76240000-76249999 due to length missmatch:             df=493 and len seq=10000
+INFO:root:Creating a df for 17:83120000-83129999
+INFO:root:skipping ref check for 17:83120000-83129999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83120000-83129999 has no data in pileup
+INFO:root:Creating a df for 17:83130000-83139999
+INFO:root:skipping ref check for 17:83130000-83139999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83130000-83139999 has no data in pileup
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76150000-76159999
+INFO:root:Creating a df for 17:76190000-76199999
+INFO:root:Creating a df for 17:76200000-76209999
+INFO:root:Creating a df for 17:76160000-76169999
+INFO:root:Creating a df for 17:76210000-76219999
+INFO:root:Creating a df for 17:76170000-76179999
+INFO:root:Creating a df for 17:76220000-76229999
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:76240000-76249999
+INFO:root:skipping ref check for 17:76240000-76249999 due to length missmatch:             df=493 and len seq=10000
+INFO:root:Creating a df for 17:83120000-83129999
+INFO:root:skipping ref check for 17:83120000-83129999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83120000-83129999 has no data in pileup
+INFO:root:Creating a df for 17:83130000-83139999
+INFO:root:skipping ref check for 17:83130000-83139999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83130000-83139999 has no data in pileup
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76150000-76159999
+INFO:root:Creating a df for 17:76190000-76199999
+INFO:root:Creating a df for 17:76200000-76209999
+INFO:root:Creating a df for 17:76160000-76169999
+INFO:root:Creating a df for 17:76210000-76219999
+INFO:root:Creating a df for 17:76170000-76179999
+INFO:root:Creating a df for 17:76220000-76229999
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:76240000-76249999
+INFO:root:skipping ref check for 17:76240000-76249999 due to length missmatch:             df=493 and len seq=10000
+INFO:root:Creating a df for 17:83120000-83129999
+INFO:root:skipping ref check for 17:83120000-83129999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83120000-83129999 has no data in pileup
+INFO:root:Creating a df for 17:83130000-83139999
+INFO:root:skipping ref check for 17:83130000-83139999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83130000-83139999 has no data in pileup
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76150000-76159999
+INFO:root:Creating a df for 17:76190000-76199999
+INFO:root:Creating a df for 17:76200000-76209999
+INFO:root:Creating a df for 17:76160000-76169999
+INFO:root:Creating a df for 17:76210000-76219999
+INFO:root:Creating a df for 17:76170000-76179999
+INFO:root:Creating a df for 17:76220000-76229999
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:76240000-76249999
+INFO:root:skipping ref check for 17:76240000-76249999 due to length missmatch:             df=493 and len seq=10000
+INFO:root:Creating a df for 17:83120000-83129999
+INFO:root:skipping ref check for 17:83120000-83129999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83120000-83129999 has no data in pileup
+INFO:root:Creating a df for 17:83130000-83139999
+INFO:root:skipping ref check for 17:83130000-83139999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83130000-83139999 has no data in pileup
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76150000-76159999
+INFO:root:Creating a df for 17:76190000-76199999
+INFO:root:Creating a df for 17:76200000-76209999
+INFO:root:Creating a df for 17:76160000-76169999
+INFO:root:Creating a df for 17:76210000-76219999
+INFO:root:Creating a df for 17:76170000-76179999
+INFO:root:Creating a df for 17:76220000-76229999
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:76240000-76249999
+INFO:root:skipping ref check for 17:76240000-76249999 due to length missmatch:             df=493 and len seq=10000
+INFO:root:Creating a df for 17:83120000-83129999
+INFO:root:skipping ref check for 17:83120000-83129999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83120000-83129999 has no data in pileup
+INFO:root:Creating a df for 17:83130000-83139999
+INFO:root:skipping ref check for 17:83130000-83139999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83130000-83139999 has no data in pileup
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:480000-489999
+INFO:root:skipping ref check for 17:480000-489999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:480000-489999 has no data in pileup
+INFO:root:Creating a df for 17:76140000-76149999
+INFO:root:Creating a df for 17:76180000-76189999
+INFO:root:skipping ref check for 17:76140000-76149999 due to length missmatch:             df=7545 and len seq=10000
+INFO:root:Creating a df for 17:76150000-76159999
+INFO:root:Creating a df for 17:76190000-76199999
+INFO:root:Creating a df for 17:76200000-76209999
+INFO:root:Creating a df for 17:76160000-76169999
+INFO:root:Creating a df for 17:76210000-76219999
+INFO:root:Creating a df for 17:76170000-76179999
+INFO:root:Creating a df for 17:76220000-76229999
+INFO:root:Creating a df for 17:76230000-76239999
+INFO:root:Creating a df for 17:76240000-76249999
+INFO:root:skipping ref check for 17:76240000-76249999 due to length missmatch:             df=493 and len seq=10000
+INFO:root:Creating a df for 17:83120000-83129999
+INFO:root:skipping ref check for 17:83120000-83129999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83120000-83129999 has no data in pileup
+INFO:root:Creating a df for 17:83130000-83139999
+INFO:root:skipping ref check for 17:83130000-83139999 due to length missmatch:             df=0 and len seq=10000
+WARNING:root:Genomic region 17:83130000-83139999 has no data in pileup

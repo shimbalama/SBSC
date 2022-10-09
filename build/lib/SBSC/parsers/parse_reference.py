@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -7,7 +10,44 @@ from Bio import SeqIO
 
 @dataclass(frozen=True, slots=True)
 class GenomicRegion:
-    """Data pertaining to a chromosomal region"""
+    """Data pertaining to a chromosomal region
+
+    Parameters
+    ----------
+    features_to_drop : str or list, default=None
+        Variable(s) to be dropped from the dataframe
+
+    chrom: str, default=None
+        the chromosome number
+    start: int, default=None
+        the position in the chromosome where this region starts
+    end: int, default=None
+        the position in the chromosome where this region ends
+    seq: str, default=None
+        the genomic sequence in the chromosome between the start and end
+    seq_padding_start: str, default=None
+        1kb of genomic sequence in the chromosome proximal to the start of region
+    seq_padding_end: str, default=None
+        1kb of genomic sequence in the chromosome following to the end of region
+    homopolymer_positions: set[int], default=None
+        the positions in the chromosome region + padding in or
+        adjacent to homoploymers of given length
+
+
+    Methods
+    -------
+    find_hom_pol_positions:
+        Returns all zero based genomic positions that are in or
+        adjacent to homoploymers of given length
+    get_hom_pol_lengths:
+        Adds the length of the associated homolymer to to each zero based position
+        in homopolymer_positions
+
+    Properties
+    -------
+    homopolymer_lengths:
+        lengths of homolymers
+    """
 
     chrom: str
     start: int
@@ -47,9 +87,7 @@ class GenomicRegion:
                     len(seq[pos : pos + length]) == length
                     and len(set(seq[pos : pos + length])) == 1
                 ):
-                    for hom_pol_pos in range(
-                        pos - 1, pos + length + 1
-                    ):
+                    for hom_pol_pos in range(pos - 1, pos + length + 1):
                         positions.add(start + hom_pol_pos + 1)
         return positions
 
