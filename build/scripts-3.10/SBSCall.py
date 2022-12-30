@@ -17,24 +17,46 @@ from SBSC.parsers.parse_reference import chunk_ref
 
 logging.basicConfig(filename="log.txt", encoding="utf-8", level=logging.DEBUG)
 
+CHROMOSOMES = ["chr" + str(i + 1) for i in range(22)] + ["chrX", "chrY"]
+
 
 def parse_args(args):
 
     parser = argparse.ArgumentParser(
         description="somatic variant caller",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        usage='SBSCall --chrom chr17 --processes 4 call --cancer_pile HCC1937_t.pileup.gz --normal_pile HCC1937.pileup.gz --ref GRCh38.fa \n \
+OR: SBSCall --chrom chr17 --processes 4 filt --raw_results results.pickle'
     )
 
     parser.add_argument("--version", action="version", version=__version__)
 
     parser.add_argument(
-        "-o", "--output", type=str, help="output file's base name", default="output"
+        "--output", type=lambda p: Path(p).absolute(), help="output VCF", default="output"
+    )
+    parser.add_argument(
+        "--chrom",
+        type=str,
+        help="Which chromosome to query",
+        default="standard",
+        choices=CHROMOSOMES + ["all"],
+    )  #        nargs='+',
+
+    parser.add_argument(
+        "--MNVs",
+        dest="MNVs",
+        action="store_false",
+        default=True,
+        help="Call MNVs (join contigous SNVs in output).",
+    )
+
+    parser.add_argument(
+        "--processes", type=int, help=("Number of processes"), default=1
     )
 
     filters = parser.add_argument_group("variant filtering options", "P, depth etc")
 
     filters.add_argument(
-        "-p",
         "--P_value",
         type=float,
         help="Exclude P values (from Fishers Exact test) larger than this.",
@@ -42,7 +64,6 @@ def parse_args(args):
     )
 
     filters.add_argument(
-        "-m",
         "--min_depth_tumour",
         type=int,
         help="Minimum read depth for tumour",
@@ -50,28 +71,11 @@ def parse_args(args):
     )
 
     filters.add_argument(
-        "-x", "--chrom", type=str, help="Which chromosomes to query", default="all"
-    )  #        nargs='+',
-
-    filters.add_argument(
-        "-y",
         "--min_depth_normal",
         type=int,
         help="Minimum read depth for normal",
         default=10,
     )
-
-    mnvgroup = filters.add_mutually_exclusive_group()
-
-    mnvgroup.add_argument(
-        "--MNVs",
-        dest="MNVs",
-        action="store_true",
-        default=True,
-        help="Call MNVs (join contigous SNVs in output).",
-    )
-
-    mnvgroup.add_argument("--no-MNVs", dest="MNVs", action="store_false")
 
     subparsers = parser.add_subparsers(
         required=True,
@@ -87,10 +91,10 @@ def parse_args(args):
         "containing all variants and a tsv format file containing only "
         "variants that pass filtering.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        usage=''
     )
 
     call.add_argument(
-        "-r",
         "--ref",
         required=True,
         type=lambda p: Path(p).absolute(),
@@ -98,7 +102,6 @@ def parse_args(args):
     )
 
     call.add_argument(
-        "-c",
         "--cancer_pile",
         required=True,
         type=lambda p: Path(p).absolute(),
@@ -106,7 +109,6 @@ def parse_args(args):
     )
 
     call.add_argument(
-        "-n",
         "--normal_pile",
         required=True,
         type=lambda p: Path(p).absolute(),
@@ -114,7 +116,6 @@ def parse_args(args):
     )
 
     call.add_argument(
-        "-b",
         "--min_base_qual",
         type=int,
         help="Minimum individual base qual to use for var calling.",
@@ -122,11 +123,6 @@ def parse_args(args):
     )  # 10=10% error
 
     call.add_argument(
-        "-p", "--processes", type=int, help=("Number of processes"), default=2
-    )
-
-    call.add_argument(
-        "-w",
         "--window_size",
         type=int,
         help=("To use multi processing the genome is chunked."),
@@ -137,9 +133,10 @@ def parse_args(args):
         "filt",
         help="filter existing variants",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        usage=''
     )
 
-    filt.add_argument("raw_results", help="JSON file containing unfiltered calls.")
+    filt.add_argument("--raw_results", help="JSON file containing unfiltered calls.")
 
     return parser.parse_args(args)
 
@@ -153,15 +150,18 @@ def main():
 
     args = parse_args(sys.argv[1:])
     start = time.time()
-    if args.chrom == "all":
-        chroms = ["chr" + str(i + 1) for i in range(22)] + ["chrX", "chrY"]
+    
+
+    if args.chrom not in CHROMOSOMES + ['all']:
+        raise ValueError(f'Please select chromosome from {CHROMOSOMES}')
+    if args.chrom == 'all':
+        chroms = CHROMOSOMES
     else:
-        chroms = args.chrom.split(",")
+        chroms = args.chrom
 
     if args.subparser_name == "filt":
         pd.read_pickle("results.pickle")
     else:
-
         chunks = chunk_ref(args.window_size, args.ref, chroms)
         dfs = []
         with Pool(processes=args.processes) as pool:

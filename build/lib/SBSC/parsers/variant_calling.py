@@ -12,7 +12,7 @@ import scipy.stats as stats
 from .df_schema import Schema, convert_to_upper, remove_ref_from_tumour_res
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Counts:
     tumour_var: int
     normal_var: int
@@ -99,7 +99,6 @@ class CallSingleNucleotideVariant(CallVariant):
                 axis=1,
             )
         return df.copy(deep=True)
-
 
 class CallInsertionOrDeletion(CallVariant):
     """Test if the most common INDEL is significantly more present in tumour"""

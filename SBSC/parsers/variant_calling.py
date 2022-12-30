@@ -12,7 +12,7 @@ import scipy.stats as stats
 from .df_schema import Schema, convert_to_upper, remove_ref_from_tumour_res
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Counts:
     tumour_var: int
     normal_var: int
@@ -100,7 +100,6 @@ class CallSingleNucleotideVariant(CallVariant):
             )
         return df.copy(deep=True)
 
-
 class CallInsertionOrDeletion(CallVariant):
     """Test if the most common INDEL is significantly more present in tumour"""
 
@@ -145,7 +144,7 @@ class CallStructuralVariant(CallVariant):
                     return "SV", counts.p_value
             return np.NaN
 
-        df.loc[:, Schema.STRUCTURAL_CALLS] = df.apply(
+        df[Schema.STRUCTURAL_CALLS] = df.apply(
             lambda x: test_top_putative_somatic_SV(
                 x[f"{Schema.STRUCTURAL_VARIANTS}_tumour"],
                 x[f"{Schema.STRUCTURAL_VARIANTS}_normal"],
@@ -169,7 +168,7 @@ class removeNonCalls(CallVariant):
             Schema.INDEL_CALLS,
             Schema.STRUCTURAL_CALLS,
         ]
-        return df.copy(deep=True)[df[cols].notna().any(1)]
+        return df[df[cols].notna().any(1)]
 
 
 class replaceNaN(CallVariant):
@@ -182,7 +181,7 @@ class replaceNaN(CallVariant):
             Schema.INDEL_CALLS,
             Schema.STRUCTURAL_CALLS,
         ]
-        df.loc[:, cols] = df.loc[:, cols].applymap(
+        df[cols] = df[cols].applymap(
             lambda x: (np.NaN, np.NaN) if pd.isna(x) else x
         )
         return df.copy(deep=True)
@@ -220,4 +219,4 @@ class CallAllVaraints:
     def get_calls(df: pd.DataFrame) -> pd.DataFrame:
         for caller in CallVariant.__subclasses__():
             df = caller.call(df)
-        return df.copy(deep=True)
+        return df

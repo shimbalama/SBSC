@@ -4,3 +4,5 @@
 **/*.pyc
 result.json
 *.fa
+*pickle
+*log*

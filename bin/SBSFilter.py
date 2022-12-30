@@ -25,14 +25,16 @@ def parse_args(args):
     parser = argparse.ArgumentParser(
         description="somatic variant caller",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        usage='SBSCall --chrom chr17 --processes 4 call --cancer_pile HCC1937_t.pileup.gz --normal_pile HCC1937.pileup.gz --ref GRCh38.fa \n \
-OR: SBSCall --chrom chr17 --processes 4 filt --raw_results results.pickle'
+        usage="SBSFilter --chrom chr17 --processes 4 filt --raw_results results.pickle",
     )
 
     parser.add_argument("--version", action="version", version=__version__)
 
     parser.add_argument(
-        "--output", type=lambda p: Path(p).absolute(), help="output VCF", default="output"
+        "--output",
+        type=lambda p: Path(p).absolute(),
+        help="output VCF",
+        default="output",
     )
     parser.add_argument(
         "--chrom",
@@ -59,7 +61,7 @@ OR: SBSCall --chrom chr17 --processes 4 filt --raw_results results.pickle'
     filters.add_argument(
         "--P_value",
         type=float,
-        help="Exclude P values (from Fishers Exact test) larger than this.",
+        help="Exclude P values (Fishers Exact test) larger than this.",
         default=0.001,
     )
 
@@ -77,41 +79,10 @@ OR: SBSCall --chrom chr17 --processes 4 filt --raw_results results.pickle'
         default=10,
     )
 
-    call = parser.add_argument_group("variant calling options", "Ref, piles etc")
-
-    call.add_argument(
-        "--ref",
-        required=True,
+    filters.add_argument(
+        "--raw_results",
         type=lambda p: Path(p).absolute(),
-        help="reference fasta",
-    )
-
-    call.add_argument(
-        "--cancer_pile",
-        required=True,
-        type=lambda p: Path(p).absolute(),
-        help="pileup of tumour/cancer",
-    )
-
-    call.add_argument(
-        "--normal_pile",
-        required=True,
-        type=lambda p: Path(p).absolute(),
-        help="pileup of normal/blood",
-    )
-
-    call.add_argument(
-        "--min_base_qual",
-        type=int,
-        help="Minimum individual base qual to use for var calling.",
-        default=10,
-    )  # 10=10% error
-
-    call.add_argument(
-        "--window_size",
-        type=int,
-        help=("To use multi processing the genome is chunked."),
-        default=10_000,
+        help="Pickle file containing unfiltered calls.",
     )
 
     return parser.parse_args(args)
@@ -119,43 +90,20 @@ OR: SBSCall --chrom chr17 --processes 4 filt --raw_results results.pickle'
 
 def main():
     """
-    1. Parse pileup
-    2. Call SNVs
-    3. Filter SNVs
+    Filter SNVs
     """
 
     args = parse_args(sys.argv[1:])
     start = time.time()
-    
 
-    if args.chrom not in CHROMOSOMES + ['all']:
-        raise ValueError(f'Please select chromosome from {CHROMOSOMES}')
-    if args.chrom == 'all':
+    if args.chrom not in CHROMOSOMES + ["all"]:
+        raise ValueError(f"Please select chromosome from {CHROMOSOMES}")
+    if args.chrom == "all":
         chroms = CHROMOSOMES
     else:
         chroms = args.chrom
 
-    if args.subparser_name == "filt":
-        pd.read_pickle("results.pickle")
-    else:
-        chunks = chunk_ref(args.window_size, args.ref, chroms)
-        dfs = []
-        with Pool(processes=args.processes) as pool:
-            process_genome_data_prefil = partial(
-                process_genome_data,
-                Pileups(
-                    args.cancer_pile,
-                    args.normal_pile,
-                ),
-                args.min_base_qual,
-            )
-            res = pool.imap_unordered(process_genome_data_prefil, chunks, chunksize=5)
-            for df in res:
-                dfs.append(df)
-        df = pd.concat(dfs)
-        df.to_pickle("results.pickle")
-
-    df.to_csv("~/Downloads/regex.csv")
+    
     # filt(df, args)
     # df = pd.DataFrame.from_dict(d, orient='index')
     print(f"Total run time (seconds): {time.time() - start}")

@@ -28,13 +28,13 @@ def create_df(region: GenomicRegion, pileup: Path) -> pd.DataFrame:
     """Converts a genomic region of a pileup to a df"""
     keys = [name for schema, name in vars(Schema).items() if "__" not in schema][:10]
     tabixfile = pysam.TabixFile(str(pileup))
-    coords: list[Any] = ["chr" + str(region.chrom), region.start, region.end + 1]
+    coords: list[str | int] = ["chr" + str(region.chrom), region.start, region.end + 1]
     df = pd.DataFrame(
         [line.split("\t") for line in tabixfile.fetch(*coords)], columns=keys
     )
     index_names = Schema.CHROMOSOME + ":" + Schema.POSITION
     df[index_names] = df[Schema.CHROMOSOME] + ":" + df[Schema.POSITION]
-    df.set_index(index_names, inplace=True)
+    df = df.set_index(index_names)
     df = df.astype({"reads": "int64", "pos": "int64"})
     return df.copy(deep=True)
 
