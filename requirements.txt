@@ -1,4 +1,9 @@
-biopython==1.79
-pandas==1.3.3
-pysam==0.16.0.1
-scipy==1.7.1
+biopython
+pandas
+pysam
+scipy
+#-e SBSC
+#biopython==1.79
+#pandas==1.3.3
+#pysam==0.16.0.1
+#scipy==1.7.1

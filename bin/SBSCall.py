@@ -135,27 +135,26 @@ def main():
     else:
         chroms = args.chrom
 
-    if args.subparser_name == "filt":
-        pd.read_pickle("results.pickle")
-    else:
-        chunks = chunk_ref(args.window_size, args.ref, chroms)
-        dfs = []
-        with Pool(processes=args.processes) as pool:
-            process_genome_data_prefil = partial(
-                process_genome_data,
-                Pileups(
-                    args.cancer_pile,
-                    args.normal_pile,
-                ),
-                args.min_base_qual,
-            )
-            res = pool.imap_unordered(process_genome_data_prefil, chunks, chunksize=5)
-            for df in res:
-                dfs.append(df)
-        df = pd.concat(dfs)
-        df.to_pickle("results.pickle")
+    
+   
+    chunks = chunk_ref(args.window_size, args.ref, chroms)
+    dfs = []
+    with Pool(processes=args.processes) as pool:
+        process_genome_data_prefil = partial(
+            process_genome_data,
+            Pileups(
+                args.cancer_pile,
+                args.normal_pile,
+            ),
+            args.min_base_qual,
+        )
+        res = pool.imap_unordered(process_genome_data_prefil, chunks, chunksize=5)
+        for df in res:
+            dfs.append(df)
+    df = pd.concat(dfs)
+    df.to_pickle("results.pickle")
 
-    df.to_csv("~/Downloads/regex.csv")
+    df.to_csv(args.output)
     # filt(df, args)
     # df = pd.DataFrame.from_dict(d, orient='index')
     print(f"Total run time (seconds): {time.time() - start}")

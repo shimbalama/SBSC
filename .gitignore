@@ -6,3 +6,8 @@ result.json
 *.fa
 *pickle
 *log*
+*swp
+test_output/*
+pyvenv.cfg
+lib64
+bin/python*
