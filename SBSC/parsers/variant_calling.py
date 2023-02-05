@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import scipy.stats as stats
 
-from .df_schema import Schema, convert_to_upper, remove_ref_from_tumour_res
+from .df_schema import Schema, convert_to_upper, remove_ref_from_tumour_res, with_logging
 
 
 @dataclass(frozen=True, slots=True)
@@ -215,7 +215,7 @@ class reformatSNVCalls(CallVariant):
 
 class CallAllVaraints:
     """Call each variant type and update df"""
-
+    @with_logging
     def get_calls(df: pd.DataFrame) -> pd.DataFrame:
         for caller in CallVariant.__subclasses__():
             df = caller.call(df)

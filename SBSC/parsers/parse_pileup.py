@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import pysam
 
-from .df_schema import Schema, remove_ref_from_tumour_res
+from .df_schema import Schema, remove_ref_from_tumour_res, with_logging
 from .parse_reference import GenomicRegion
 from .variant_calling import CallAllVaraints
 
@@ -22,7 +22,6 @@ from .variant_calling import CallAllVaraints
 class Pileups:
     cancer_pileup: Path
     normal_pileup: Path
-
 
 def create_df(region: GenomicRegion, pileup: Path) -> pd.DataFrame:
     """Converts a genomic region of a pileup to a df"""
@@ -38,7 +37,6 @@ def create_df(region: GenomicRegion, pileup: Path) -> pd.DataFrame:
     df = df.astype({"reads": "int64", "pos": "int64"})
     return df.copy(deep=True)
 
-
 def fill_df(input_data: Pileups, region: GenomicRegion) -> pd.DataFrame:
     """"""
     logging.info(f"Creating a df for {str(region)}")
@@ -52,7 +50,6 @@ def fill_df(input_data: Pileups, region: GenomicRegion) -> pd.DataFrame:
     df = add_homoploymers(df, region.homopolymer_lengths)
 
     return df.copy(deep=True)
-
 
 def remove_positions_with_little_support_for_somatic_var(
     df: pd.DataFrame,
@@ -76,7 +73,6 @@ def remove_positions_with_little_support_for_somatic_var(
         )
     ]
 
-
 def remove_redundant_column(df: pd.DataFrame, col_name: str) -> pd.DataFrame:
     """Collapses columns that are identical in tumour and normal"""
     tumour_col = f"{col_name}_tumour"
@@ -88,7 +84,6 @@ def remove_redundant_column(df: pd.DataFrame, col_name: str) -> pd.DataFrame:
     del df[normal_col]
 
     return df.copy(deep=True)
-
 
 def check_the_ref_seq_matches_the_pileup_seq(
     df: pd.DataFrame, region: GenomicRegion
@@ -110,13 +105,11 @@ def check_the_ref_seq_matches_the_pileup_seq(
             len(region.seq),
         )
 
-
 def add_homoploymers(df: pd.DataFrame, region: dict[int, int]) -> pd.DataFrame:
     """Adds a homopolymer column to df"""
     df[Schema.HOMOPOLYMER] = df[Schema.POSITION].apply(lambda x: region.get(x, 0))
 
     return df.copy(deep=True)
-
 
 def create_SV_column(sample_type: str, df: pd.DataFrame) -> pd.DataFrame:
     """Adds SV column to df"""
@@ -124,7 +117,6 @@ def create_SV_column(sample_type: str, df: pd.DataFrame) -> pd.DataFrame:
     SV_col = f"{Schema.STRUCTURAL_VARIANTS}_{sample_type}"
     df[SV_col] = df[results_col].str.count("^") + df[results_col].str.count("$")
     return df.copy(deep=True)
-
 
 def remove_carrots_from_res(sample_type: str, df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -148,8 +140,6 @@ def remove_carrots_from_res(sample_type: str, df: pd.DataFrame) -> pd.DataFrame:
     ].apply(slice_and_dice)
     return df.copy(deep=True)
 
-
-
 def correct_regex(regex_result: list[str]) -> list[str]:
     """Helper function for removing indels from str"""
     corected_regex_result: list[str] = []
@@ -159,7 +149,6 @@ def correct_regex(regex_result: list[str]) -> list[str]:
         indel_nucs = "".join(char for char in indel if char.isalpha())[: int(indel_len)]
         corected_regex_result.append("".join([indel[0], indel_len, indel_nucs]))
     return corected_regex_result
-
 
 def remove_indels_from_results_str(sample_type: str, df: pd.DataFrame) -> pd.DataFrame:
     """Separates the indels out from the pre-processed results str"""
@@ -183,7 +172,6 @@ def remove_indels_from_results_str(sample_type: str, df: pd.DataFrame) -> pd.Dat
     f"{nucs} and {qual} should have same length"
     return df.copy(deep=True)
 
-
 def find_indels_in_results_str(sample_type: str, df: pd.DataFrame) -> pd.DataFrame:
     """Separates the indels out from the pre-processed results str"""
 
@@ -197,7 +185,6 @@ def find_indels_in_results_str(sample_type: str, df: pd.DataFrame) -> pd.DataFra
         f"{Schema.RESULTS_NO_CARET}_{sample_type}"
     ].apply(find_indels_in_res)
     return df.copy(deep=True)
-
 
 def remove_low_quality_bases(
     sample_type: str, df: pd.DataFrame, phred: int
@@ -229,7 +216,6 @@ def remove_low_quality_bases(
     )
     return df.copy(deep=True)
 
-
 def get_read_depth_after_filtering(sample_type: str, df: pd.DataFrame) -> pd.DataFrame:
     """Adds column for post filtering read depth"""
     df[f"{Schema.READ_DEPTH_POST_FILTER}_{sample_type}"] = df[
@@ -240,7 +226,6 @@ def get_read_depth_after_filtering(sample_type: str, df: pd.DataFrame) -> pd.Dat
 
 Preprocessor = Callable[[str, pd.DataFrame], pd.DataFrame]
 
-
 def compose(sample_type: str, *functions: Preprocessor) -> Preprocessor:
     """Helper function to call all df functions sequencially"""
     partially_filled_funcs = [partial(func, sample_type) for func in functions]
@@ -248,7 +233,7 @@ def compose(sample_type: str, *functions: Preprocessor) -> Preprocessor:
         lambda func1, func2: lambda x: func2(func1(x)), partially_filled_funcs
     )
 
-
+@with_logging
 def process_genome_data(
     piles: Pileups, min_base_qual: int, region: GenomicRegion
 ) -> pd.DataFrame | None:
