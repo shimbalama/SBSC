@@ -1,4 +1,7 @@
 from collections import Counter
+import functools
+import logging
+from typing import Any, Callable
 
 
 # might split this schema into tmp/final TODO
@@ -51,3 +54,13 @@ def remove_ref_from_tumour_res(
         convert_to_upper(normal_results, ref)
     ).most_common()[0][0]
     return convert_to_upper(tumour_results, ref).replace(most_common_base_in_normal, "")
+
+def with_logging(func: Callable[..., Any]) -> Callable[..., Any]:
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        logging.info(f"Calling {func.__name__}")
+        value = func(*args, **kwargs)
+        logging.info(f"Finished {func.__name__}")
+        return value
+
+    return wrapper

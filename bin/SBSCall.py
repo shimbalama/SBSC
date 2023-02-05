@@ -15,18 +15,14 @@ from SBSC.output.filt import filt
 from SBSC.parsers.parse_pileup import Pileups, process_genome_data
 from SBSC.parsers.parse_reference import chunk_ref
 
-logging.basicConfig(filename="log.txt", encoding="utf-8", level=logging.DEBUG)
-
 CHROMOSOMES = ["chr" + str(i + 1) for i in range(22)] + ["chrX", "chrY"]
-
 
 def parse_args(args):
 
     parser = argparse.ArgumentParser(
         description="somatic variant caller",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        usage='SBSCall --chrom chr17 --processes 4 call --cancer_pile HCC1937_t.pileup.gz --normal_pile HCC1937.pileup.gz --ref GRCh38.fa \n \
-OR: SBSCall --chrom chr17 --processes 4 filt --raw_results results.pickle'
+        usage='SBSCall ...'
     )
 
     parser.add_argument("--version", action="version", version=__version__)
@@ -52,6 +48,21 @@ OR: SBSCall --chrom chr17 --processes 4 filt --raw_results results.pickle'
 
     parser.add_argument(
         "--processes", type=int, help=("Number of processes"), default=1
+    )
+
+    parser.add_argument(
+        "--log_name", 
+        type=lambda p: Path(p).absolute(), 
+        help=("Name of log file"), 
+        default='log.txt'
+    )
+
+    parser.add_argument(
+        "--log_level", 
+        type=str, 
+        help=("Number of processes"), 
+        default='INFO', 
+        choices=['DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL']
     )
 
     filters = parser.add_argument_group("variant filtering options", "P, depth etc")
@@ -116,7 +127,6 @@ OR: SBSCall --chrom chr17 --processes 4 filt --raw_results results.pickle'
 
     return parser.parse_args(args)
 
-
 def main():
     """
     1. Parse pileup
@@ -125,8 +135,22 @@ def main():
     """
 
     args = parse_args(sys.argv[1:])
+
+    log_choices = { 'DEBUG': logging.DEBUG,
+                    'INFO': logging.INFO,
+                    'WARN': logging.WARN,
+                    'ERROR': logging.ERROR, 
+                    'CRITICAL': logging.CRITICAL}
+
+    logging.basicConfig(
+        filename=args.log_name, 
+        encoding="utf-8", 
+        level=log_choices[args.log_level],
+        format="%(asctime)s %(levelname)s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+
     start = time.time()
-    
 
     if args.chrom not in CHROMOSOMES + ['all']:
         raise ValueError(f'Please select chromosome from {CHROMOSOMES}')
@@ -134,8 +158,6 @@ def main():
         chroms = CHROMOSOMES
     else:
         chroms = args.chrom
-
-    
    
     chunks = chunk_ref(args.window_size, args.ref, chroms)
     dfs = []

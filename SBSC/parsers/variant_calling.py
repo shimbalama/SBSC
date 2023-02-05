@@ -168,7 +168,7 @@ class removeNonCalls(CallVariant):
             Schema.INDEL_CALLS,
             Schema.STRUCTURAL_CALLS,
         ]
-        return df[df[cols].notna().any(1)]
+        return df[df[cols].notna().any(axis=1)]
 
 
 class replaceNaN(CallVariant):

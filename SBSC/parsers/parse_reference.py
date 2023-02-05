@@ -7,6 +7,8 @@ from pathlib import Path
 import pandas as pd
 from Bio import SeqIO
 
+from .df_schema import with_logging
+
 
 @dataclass(frozen=True, slots=True)
 class GenomicRegion:
@@ -120,7 +122,7 @@ class GenomicRegion:
     def homopolymer_lengths(self) -> dict[int, int]:
         return self.get_hom_pol_lengths()
 
-
+@with_logging
 def chunk_ref(size: int, reference: Path, chroms: list[str]):
     """
     Split ref into chunks for parallel processing
